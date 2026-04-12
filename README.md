@@ -1,27 +1,28 @@
 # faceswap
 
 Subject-on-character face swap workflow for ComfyUI with:
-- automatic face detection,
+- ReActor face swap,
 - explicit intermediate previews,
 - local-first run path (no SimplePod required).
 
 ## What is included
 
 - `scripts/build_faceswap_workflow.py`: generates a ComfyUI API workflow JSON.
-- `workflows/faceswap_subject_on_character_api.json`: ready-to-import prompt graph.
-- `docs/runbook.md`: run steps for local ComfyUI and optional SimplePod usage.
+- `scripts/simplepod.py`: profiles, deploys, and preflights the SimplePod ComfyUI instance.
+- `workflows/faceswap_subject_on_character_api.json`: API prompt for automated queueing.
+- `workflows/faceswap_subject_on_character_ui.json`: browser-runnable ComfyUI graph for manual review.
+- `.agents/skills/remote-operator/SKILL.md`: reusable remote-operation checklist.
+- `docs/runbook.md`: run steps for local ComfyUI and SimplePod usage.
+- `docs/known_mistakes.md`: compact ledger of mistakes and fixes to avoid repeating.
 
 ## Workflow strategy
 
 1. Load **subject** face image and **target** character image.
-2. Run a low-denoise diffusion pass to harmonize lighting/style while preserving composition.
-3. Perform face swap (subject identity onto target face region).
-4. Run automatic face detection + face-detailer refinement.
-5. Save both:
-   - intermediate swapped result (`faceswap/final_*`)
-   - refined result (`faceswap/refined_*`)
+2. Perform a ReActor swap from subject identity onto the target face region.
+3. Apply one lightweight face-restore pass with `GFPGANv1.4.pth`.
+4. Save the base swap output as `faceswap/final_*`.
 
-This keeps the first repo's core idea (diffusion + swap) while adding robust automatic detection/refinement and verification checkpoints.
+This is intentionally smaller than the earlier diffusion/detailer idea. On a 12 GB SimplePod GPU, the first milestone is a reliable base swap; diffusion cleanup can be added after that works.
 
 ## Generate or regenerate the workflow JSON
 
@@ -29,15 +30,64 @@ This keeps the first repo's core idea (diffusion + swap) while adding robust aut
 python scripts/build_faceswap_workflow.py
 ```
 
+This writes both the API prompt and the UI graph. Keep them together in reviews and commits.
+
 You can override assets/models:
 
 ```bash
 python scripts/build_faceswap_workflow.py \
   --subject-image my_subject.jpg \
   --target-image my_target.png \
-  --checkpoint flux1-dev-fp8.safetensors \
-  --vae ae.safetensors
+  --swap-model inswapper_128.onnx \
+  --face-restore-model GFPGANv1.4.pth
 ```
+
+## SimplePod quick path
+
+The `.env` file should define:
+
+```bash
+SIMPLEPOD_SSH_HOST=...
+SIMPLEPOD_SSH_PORT=22
+SIMPLEPOD_SSH_USER=root
+SIMPLEPOD_PASSWORD=...
+SIMPLEPOD_COMFYUI_URL=...
+```
+
+Install the helper dependency in a local venv, profile the pod, deploy files, then preflight:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python scripts/simplepod.py profile
+.venv/bin/python scripts/build_faceswap_workflow.py
+.venv/bin/python scripts/simplepod.py deploy
+.venv/bin/python scripts/simplepod.py init-auth
+.venv/bin/python scripts/simplepod.py preflight
+.venv/bin/python scripts/simplepod.py queue --wait 300
+```
+
+The default workflow uses `GFPGANv1.4.pth` at full visibility plus ReActor FaceBoost. Use `--no-face-boost` when regenerating if you want the simpler base swap only.
+
+For human-in-the-loop review in ComfyUI, the workflow now writes:
+
+- `faceswap/intermediate/subject_input_*`
+- `faceswap/intermediate/target_input_*`
+- `faceswap/intermediate/plain_swap_*`
+- `faceswap/final_*`
+
+Load `faceswap_subject_on_character_ui` from the ComfyUI workflow browser when running manually. The `_api` file is for `scripts/simplepod.py queue` and will appear empty if opened as a UI graph.
+
+## Minimum SimplePod spec
+
+Recommended minimum for this base ReActor pipeline:
+
+- GPU: NVIDIA with 12 GB VRAM minimum; 16 GB+ preferred for later diffusion cleanup.
+- RAM: 24 GB minimum; 32 GB preferred.
+- Disk: 40 GB minimum; 80 GB+ preferred once ReActor, ONNX Runtime, swap/restore models, and cache files are included.
+- Image: Python 3.10+ with CUDA/PyTorch support and ComfyUI already installed or installable.
+
+For an easier first run, choose a 16 GB VRAM GPU and treat 12 GB as the budget/debug floor.
 
 ## Note about this environment
 

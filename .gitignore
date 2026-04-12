@@ -1,0 +1,22 @@
+# IDEs and OS
+.DS_Store
+.vscode/
+.idea/
+
+# Python / Scripts
+__pycache__/
+*.pyc
+*.pyo
+docs/logs/
+
+# Virtual Environments
+venv/
+env/
+.venv/
+.env
+
+# ComfyUI specific (if any local outputs are generated)
+output/
+temp/
+models/
+test_outputs/

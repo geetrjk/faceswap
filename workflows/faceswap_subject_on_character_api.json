@@ -2,16 +2,35 @@
   "1": {
     "class_type": "LoadImage",
     "inputs": {
-      "image": "subject.jpg"
+      "image": "subject_5 year curly.webp"
     }
   },
   "2": {
     "class_type": "LoadImage",
     "inputs": {
-      "image": "target.png"
+      "image": "superman.png"
     }
   },
   "3": {
+    "class_type": "PreviewImage",
+    "inputs": {
+      "images": [
+        "1",
+        0
+      ]
+    }
+  },
+  "4": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "1",
+        0
+      ],
+      "filename_prefix": "faceswap/intermediate/subject_input"
+    }
+  },
+  "5": {
     "class_type": "PreviewImage",
     "inputs": {
       "images": [
@@ -20,103 +39,22 @@
       ]
     }
   },
-  "4": {
-    "class_type": "CheckpointLoaderSimple",
-    "inputs": {
-      "ckpt_name": "flux1-dev-fp8.safetensors"
-    }
-  },
-  "5": {
-    "class_type": "VAELoader",
-    "inputs": {
-      "vae_name": "ae.safetensors"
-    }
-  },
   "6": {
-    "class_type": "CLIPTextEncode",
+    "class_type": "SaveImage",
     "inputs": {
-      "clip": [
-        "4",
-        1
-      ],
-      "text": "high detail portrait, keep target scene composition, preserve costume and background, identity-consistent face"
-    }
-  },
-  "7": {
-    "class_type": "CLIPTextEncode",
-    "inputs": {
-      "clip": [
-        "4",
-        1
-      ],
-      "text": "lowres, blurry, deformed face, extra eyes, bad anatomy"
-    }
-  },
-  "8": {
-    "class_type": "VAEEncode",
-    "inputs": {
-      "pixels": [
+      "images": [
         "2",
         0
       ],
-      "vae": [
-        "5",
-        0
-      ]
+      "filename_prefix": "faceswap/intermediate/target_input"
     }
   },
-  "9": {
-    "class_type": "KSampler",
-    "inputs": {
-      "model": [
-        "4",
-        0
-      ],
-      "positive": [
-        "6",
-        0
-      ],
-      "negative": [
-        "7",
-        0
-      ],
-      "latent_image": [
-        "8",
-        0
-      ],
-      "seed": 2121212121,
-      "steps": 18,
-      "cfg": 3.8,
-      "sampler_name": "euler",
-      "scheduler": "normal",
-      "denoise": 0.35
-    }
-  },
-  "10": {
-    "class_type": "VAEDecode",
-    "inputs": {
-      "samples": [
-        "9",
-        0
-      ],
-      "vae": [
-        "5",
-        0
-      ]
-    }
-  },
-  "11": {
-    "class_type": "UltralyticsDetectorProvider",
-    "inputs": {
-      "model_name": "face_yolov8m.pt"
-    }
-  },
-  "12": {
+  "7": {
     "class_type": "ReActorFaceSwap",
     "inputs": {
       "enabled": true,
       "input_image": [
-        "10",
+        "2",
         0
       ],
       "source_image": [
@@ -124,8 +62,8 @@
         0
       ],
       "facedetection": "retinaface_resnet50",
-      "face_restore_model": "GFPGANv1.4.pth",
-      "face_restore_visibility": 0.7,
+      "face_restore_model": "none",
+      "face_restore_visibility": 1.0,
       "codeformer_weight": 0.5,
       "swap_model": "inswapper_128.onnx",
       "detect_gender_input": "no",
@@ -135,92 +73,81 @@
       "console_log_level": 1
     }
   },
-  "13": {
+  "8": {
     "class_type": "PreviewImage",
     "inputs": {
       "images": [
-        "12",
+        "7",
         0
       ]
     }
   },
-  "14": {
+  "9": {
     "class_type": "SaveImage",
     "inputs": {
       "images": [
-        "12",
+        "7",
+        0
+      ],
+      "filename_prefix": "faceswap/intermediate/plain_swap"
+    }
+  },
+  "10": {
+    "class_type": "ReActorFaceSwap",
+    "inputs": {
+      "enabled": true,
+      "input_image": [
+        "2",
+        0
+      ],
+      "source_image": [
+        "1",
+        0
+      ],
+      "facedetection": "retinaface_resnet50",
+      "face_restore_model": "GFPGANv1.4.pth",
+      "face_restore_visibility": 1.0,
+      "codeformer_weight": 0.5,
+      "swap_model": "inswapper_128.onnx",
+      "detect_gender_input": "no",
+      "detect_gender_source": "no",
+      "input_faces_index": "0",
+      "source_faces_index": "0",
+      "console_log_level": 1,
+      "face_boost": [
+        "13",
+        0
+      ]
+    }
+  },
+  "11": {
+    "class_type": "PreviewImage",
+    "inputs": {
+      "images": [
+        "10",
+        0
+      ]
+    }
+  },
+  "12": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "10",
         0
       ],
       "filename_prefix": "faceswap/final"
     }
   },
-  "15": {
-    "class_type": "FaceDetailer",
+  "13": {
+    "class_type": "ReActorFaceBoost",
     "inputs": {
-      "image": [
-        "12",
-        0
-      ],
-      "model": [
-        "4",
-        0
-      ],
-      "clip": [
-        "4",
-        1
-      ],
-      "vae": [
-        "5",
-        0
-      ],
-      "positive": [
-        "6",
-        0
-      ],
-      "negative": [
-        "7",
-        0
-      ],
-      "bbox_detector": [
-        "11",
-        0
-      ],
-      "sam_model_opt": null,
-      "segm_detector_opt": null,
-      "guide_size": 512,
-      "guide_size_for": true,
-      "max_size": 1024,
-      "seed": 222222,
-      "steps": 10,
-      "cfg": 3.0,
-      "sampler_name": "euler",
-      "scheduler": "normal",
-      "denoise": 0.25,
-      "feather": 8,
-      "noise_mask": true,
-      "force_inpaint": true,
-      "bbox_threshold": 0.35,
-      "bbox_dilation": 18,
-      "bbox_crop_factor": 2.2
-    }
-  },
-  "16": {
-    "class_type": "PreviewImage",
-    "inputs": {
-      "images": [
-        "15",
-        0
-      ]
-    }
-  },
-  "17": {
-    "class_type": "SaveImage",
-    "inputs": {
-      "images": [
-        "15",
-        0
-      ],
-      "filename_prefix": "faceswap/refined"
+      "enabled": true,
+      "boost_model": "GFPGANv1.4.pth",
+      "interpolation": "Bicubic",
+      "visibility": 1.0,
+      "codeformer_weight": 0.5,
+      "restore_with_main_after": false
     }
   }
 }
