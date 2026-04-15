@@ -132,6 +132,7 @@ VISUAL_PROMPT_REQUIRED_MODEL_PATHS = [
     "models/checkpoints/sd_xl_base_1.0.safetensors",
     "models/checkpoints/sd_xl_base_1.0_inpainting_0.1.safetensors",
     "models/clip_vision/CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+    "models/ipadapter/ip-adapter_sdxl_vit-h.safetensors",
     "models/ipadapter/ip-adapter-plus-face_sdxl_vit-h.safetensors",
     "models/pulid/ip-adapter_pulid_sdxl_fp16.safetensors",
     "models/sams/sam_vit_b_01ec64.pth",
@@ -145,16 +146,19 @@ VISUAL_PROMPT_CUSTOM_NODES = {
     "ComfyUI_IPAdapter_plus": "https://github.com/cubiq/ComfyUI_IPAdapter_plus.git",
     "PuLID_ComfyUI": "https://github.com/cubiq/PuLID_ComfyUI.git",
     "ComfyUI-Impact-Pack": "https://github.com/ltdrdata/ComfyUI-Impact-Pack.git",
+    "ComfyUI-CLIPSeg": "https://github.com/time-river/ComfyUI-CLIPSeg.git",
 }
 VISUAL_PROMPT_CUSTOM_NODE_ARCHIVES = {
     "ComfyUI_IPAdapter_plus": "https://codeload.github.com/cubiq/ComfyUI_IPAdapter_plus/zip/refs/heads/main",
     "PuLID_ComfyUI": "https://codeload.github.com/cubiq/PuLID_ComfyUI/zip/refs/heads/main",
     "ComfyUI-Impact-Pack": "https://codeload.github.com/ltdrdata/ComfyUI-Impact-Pack/zip/refs/heads/Main",
+    "ComfyUI-CLIPSeg": "https://codeload.github.com/time-river/ComfyUI-CLIPSeg/zip/refs/heads/main",
 }
 VISUAL_PROMPT_MODEL_URLS = {
     "models/checkpoints/sd_xl_base_1.0.safetensors": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors",
     "models/checkpoints/sd_xl_base_1.0_inpainting_0.1.safetensors": "https://huggingface.co/benjamin-paine/sd-xl-alternative-bases/resolve/main/sd_xl_base_1.0_inpainting_0.1.safetensors",
     "models/clip_vision/CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors": "https://huggingface.co/fofr/comfyui/resolve/main/clip_vision/CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+    "models/ipadapter/ip-adapter_sdxl_vit-h.safetensors": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter_sdxl_vit-h.safetensors",
     "models/ipadapter/ip-adapter-plus-face_sdxl_vit-h.safetensors": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus-face_sdxl_vit-h.safetensors",
     "models/pulid/ip-adapter_pulid_sdxl_fp16.safetensors": "https://huggingface.co/8clabs/models-moved/resolve/main/pulid/ip-adapter_pulid_sdxl_fp16.safetensors",
     "models/sams/sam_vit_b_01ec64.pth": "https://huggingface.co/scenario-labs/sam_vit/resolve/main/sam_vit_b_01ec64.pth",
@@ -163,6 +167,7 @@ VISUAL_PROMPT_MODEL_MIN_BYTES = {
     "models/checkpoints/sd_xl_base_1.0.safetensors": 6_000_000_000,
     "models/checkpoints/sd_xl_base_1.0_inpainting_0.1.safetensors": 6_000_000_000,
     "models/clip_vision/CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors": 2_000_000_000,
+    "models/ipadapter/ip-adapter_sdxl_vit-h.safetensors": 650_000_000,
     "models/ipadapter/ip-adapter-plus-face_sdxl_vit-h.safetensors": 700_000_000,
     "models/pulid/ip-adapter_pulid_sdxl_fp16.safetensors": 700_000_000,
     "models/sams/sam_vit_b_01ec64.pth": 300_000_000,
@@ -564,6 +569,53 @@ ensure_requirements() {{
   fi
 }}
 
+ensure_python_module() {{
+  module_name="$1"
+  package_name="$2"
+  if python3 -c "import $module_name" >/dev/null 2>&1; then
+    echo "OK:python_module:$module_name"
+  else
+    echo "Installing python package $package_name for module $module_name"
+    python3 -m pip install --disable-pip-version-check --root-user-action=ignore -q "$package_name"
+  fi
+}}
+
+ensure_clipseg_init() {{
+  root="custom_nodes/ComfyUI-CLIPSeg"
+  if [ ! -f "$root/__init__.py" ] && [ -f "$root/custom_nodes/clipseg.py" ]; then
+    echo "Creating ComfyUI-CLIPSeg loader shim"
+    cat > "$root/__init__.py" <<'PY'
+from .custom_nodes.clipseg import CLIPSeg
+
+NODE_CLASS_MAPPINGS = {
+    "CLIPSeg": CLIPSeg,
+}
+
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "CLIPSeg": "CLIPSeg",
+}
+PY
+  fi
+}}
+
+ensure_clipseg_init() {{
+  root="custom_nodes/ComfyUI-CLIPSeg"
+  if [ ! -f "$root/__init__.py" ] && [ -f "$root/custom_nodes/clipseg.py" ]; then
+    echo "Creating ComfyUI-CLIPSeg loader shim"
+    cat > "$root/__init__.py" <<'PY'
+from .custom_nodes.clipseg import CLIPSeg
+
+NODE_CLASS_MAPPINGS = {
+    "CLIPSeg": CLIPSeg,
+}
+
+NODE_DISPLAY_NAME_MAPPINGS = {
+    "CLIPSeg": "CLIPSeg",
+}
+PY
+  fi
+}}
+
 ensure_file() {{
   rel="$1"
   url="$2"
@@ -661,6 +713,17 @@ ensure_requirements() {{
   if [ -f "$path/requirements.txt" ]; then
     echo "Installing requirements for $path"
     python3 -m pip install --disable-pip-version-check --root-user-action=ignore -q -r "$path/requirements.txt"
+  fi
+}}
+
+ensure_python_module() {{
+  module_name="$1"
+  package_name="$2"
+  if python3 -c "import $module_name" >/dev/null 2>&1; then
+    echo "OK:python_module:$module_name"
+  else
+    echo "Installing python package $package_name for module $module_name"
+    python3 -m pip install --disable-pip-version-check --root-user-action=ignore -q "$package_name"
   fi
 }}
 
@@ -790,6 +853,17 @@ ensure_requirements() {{
   fi
 }}
 
+ensure_python_module() {{
+  module_name="$1"
+  package_name="$2"
+  if python3 -c "import $module_name" >/dev/null 2>&1; then
+    echo "OK:python_module:$module_name"
+  else
+    echo "Installing python package $package_name for module $module_name"
+    python3 -m pip install --disable-pip-version-check --root-user-action=ignore -q "$package_name"
+  fi
+}}
+
 ensure_file() {{
   rel="$1"
   url="$2"
@@ -840,6 +914,25 @@ mkdir -p custom_nodes models/checkpoints models/clip_vision models/ipadapter mod
 ensure_requirements custom_nodes/ComfyUI_IPAdapter_plus
 ensure_requirements custom_nodes/PuLID_ComfyUI
 ensure_requirements custom_nodes/ComfyUI-Impact-Pack
+ensure_python_module transformers transformers
+ensure_python_module scipy scipy
+ensure_python_module matplotlib matplotlib
+ensure_python_module cv2 opencv-python
+ensure_python_module PIL Pillow
+if [ ! -f custom_nodes/ComfyUI-CLIPSeg/__init__.py ] && [ -f custom_nodes/ComfyUI-CLIPSeg/custom_nodes/clipseg.py ]; then
+  echo "Creating ComfyUI-CLIPSeg loader shim"
+  cat > custom_nodes/ComfyUI-CLIPSeg/__init__.py <<'PY'
+from .custom_nodes.clipseg import CLIPSeg
+
+NODE_CLASS_MAPPINGS = {{
+    "CLIPSeg": CLIPSeg,
+}}
+
+NODE_DISPLAY_NAME_MAPPINGS = {{
+    "CLIPSeg": "CLIPSeg",
+}}
+PY
+fi
 
 {model_lines}
 {archive_lines}
@@ -851,6 +944,7 @@ required = [
     Path("custom_nodes/ComfyUI_IPAdapter_plus"),
     Path("custom_nodes/PuLID_ComfyUI"),
     Path("custom_nodes/ComfyUI-Impact-Pack"),
+    Path("custom_nodes/ComfyUI-CLIPSeg"),
     Path("models/clip_vision/CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"),
     Path("models/ipadapter/ip-adapter-plus-face_sdxl_vit-h.safetensors"),
     Path("models/pulid/ip-adapter_pulid_sdxl_fp16.safetensors"),

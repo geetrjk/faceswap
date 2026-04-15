@@ -143,3 +143,21 @@ Fix: Use `python3` consistently in remote commands inside `scripts/simplepod.py`
 Problem: The first true visual-prompt stack converted the `FaceSegmentation` mask into `SEGS` and fed that into `SAMDetectorCombined`. On the current cartoon target, that path produced structurally wrong masks that spilled into body and border regions, which made the inpaint result unusable.
 
 Fix: Do not put `MaskToSEGS -> SAMDetectorCombined` on the active path for this workflow. Keep SAM installed and validated, but drive the current pipeline from the direct `FaceSegmentation -> GrowMask -> FeatherMask` mask until a better detector source is available.
+
+## Impact CLIPSeg Provider Is Not Self-Contained
+
+Problem: `CLIPSegDetectorProvider` can appear in `/object_info` through Impact Pack even when the actual `CLIPSeg` node is not installed. In that state, the workflow queues successfully but fails at runtime with `CLIPSeg custom node isn't installed`.
+
+Fix: Install a real `ComfyUI-CLIPSeg` extension before using the provider. Validate that both `CLIPSeg` and `CLIPSegDetectorProvider` appear in live `/object_info` on the target backend.
+
+## CLIPSeg Repo Needed A Loader Shim
+
+Problem: The current public `ComfyUI-CLIPSeg` repo cloned onto the pod, but it did not include a top-level `__init__.py`, so ComfyUI refused to load it as a custom node package.
+
+Fix: Create a small top-level loader shim that exports `NODE_CLASS_MAPPINGS = {"CLIPSeg": CLIPSeg}` from `custom_nodes/clipseg.py`, then start a fresh ComfyUI backend so the node is registered.
+
+## Standard SDXL IP-Adapter Needs Its Own Weight File
+
+Problem: Installing only `ip-adapter-plus-face_sdxl_vit-h.safetensors` is not enough when the workflow uses the `STANDARD (medium strength)` preset. `IPAdapterUnifiedLoader` then fails at runtime with `IPAdapter model not found`.
+
+Fix: Install `models/ipadapter/ip-adapter_sdxl_vit-h.safetensors` in addition to the face-plus model whenever the workflow uses the standard SDXL preset.
