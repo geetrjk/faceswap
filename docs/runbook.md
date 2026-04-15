@@ -66,6 +66,20 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
+For a fresh SimplePod setup that installs both the ReActor baseline and InstantID experiments, prefer:
+
+```bash
+scripts/setup_simplepod_instantid.sh
+```
+
+The script profiles the pod, regenerates workflows, installs remote custom nodes/models, deploys the ReActor, InstantID, and crop-stitch workflows, pauses for the required ComfyUI/SimplePod restart, then runs preflight checks.
+
+The setup helper is designed to be idempotent:
+- custom node `git clone` attempts time out and fall back to GitHub archive downloads
+- large model downloads use resumable `curl -C -`
+- model files are checked by minimum expected size, so partial `.safetensors` or `.onnx` files are not treated as valid
+- long install commands stream remote output so stalled downloads are visible quickly
+
 Profile the pod before changing anything:
 
 ```bash
@@ -103,11 +117,83 @@ The current default workflow uses ReActor FaceBoost with `GFPGANv1.4.pth`. For a
 .venv/bin/python scripts/build_faceswap_workflow.py --no-face-boost --face-restore-visibility 0.7
 ```
 
+## 2b) Experimental InstantID run
+
+Use this path only for the separate subject-first SDXL + InstantID experiment. It does not replace the ReActor baseline workflow.
+
+```bash
+.venv/bin/python scripts/build_instantid_workflow.py
+.venv/bin/python scripts/simplepod.py deploy-instantid
+.venv/bin/python scripts/simplepod.py preflight-instantid
+.venv/bin/python scripts/simplepod.py queue --workflow workflows/instantid_subject_pose_style_api.json --wait 600
+```
+
+For the crop-first/stitch-back inspection variant:
+
+```bash
+.venv/bin/python scripts/build_instantid_crop_stitch_workflow.py
+.venv/bin/python scripts/simplepod.py deploy-instantid-crop
+.venv/bin/python scripts/simplepod.py preflight-instantid --crop-stitch
+```
+
+For manual browser inspection, load `instantid_crop_stitch_experiment_ui` from the `faceswap` workflow folder. It is experimental and keeps separate checkpoints for the crop region mask, shrunken edit mask, raw crop inpaint, crop composite, and final stitched image.
+
+For the separate ReActor-first swap-and-bake sidecar:
+
+```bash
+.venv/bin/python scripts/build_swap_and_bake_workflow.py
+.venv/bin/python scripts/simplepod.py deploy-swap-and-bake
+.venv/bin/python scripts/simplepod.py queue --workflow workflows/swap_and_bake_experiment_api.json --wait 600
+```
+
+For manual browser inspection, load `swap_and_bake_experiment_ui` from the `faceswap` workflow folder. This workflow keeps the current InstantID pipeline unchanged: it first creates a ReActor swap, saves the face mask for inspection, then runs a low-denoise full-image SDXL bake from the swapped image.
+
+For the visual-prompt hybrid sidecar adapted to the current backend:
+
+```bash
+.venv/bin/python scripts/build_visual_prompt_hybrid_workflow.py
+.venv/bin/python scripts/simplepod.py deploy-visual-prompt-hybrid
+.venv/bin/python scripts/simplepod.py queue --workflow workflows/visual_prompt_hybrid_experiment_api.json --wait 900
+```
+
+For manual browser inspection, load `visual_prompt_hybrid_experiment_ui` from the `faceswap` workflow folder. The reference design expects PuLID, IP-Adapter Plus, and SAM/Impact nodes; the current live backend does not expose those nodes, so the checked-in sidecar uses the available fallback: FaceSegmentation target head mask, SDXL head fill, ReActor likeness snap, and low-denoise full-image bake.
+
+The InstantID path needs additional custom nodes and models. See `docs/instantid_experiment.md` before provisioning or queueing.
+
 Human-in-the-loop output checkpoints:
 - `faceswap/intermediate/subject_input_*`
 - `faceswap/intermediate/target_input_*`
 - `faceswap/intermediate/plain_swap_*`
 - `faceswap/final_*`
+
+InstantID experiment checkpoints:
+- `faceswap/instantid/intermediate/subject_identity_*`
+- `faceswap/instantid/intermediate/target_pose_style_*`
+- `faceswap/instantid/intermediate/target_face_mask_*`
+- `faceswap/instantid/intermediate/target_face_keypoints_*`
+- `faceswap/instantid/intermediate/face_inpaint_raw_*`
+- `faceswap/instantid/final_*`
+
+InstantID crop-stitch experiment checkpoints:
+- `faceswap/instantid_crop_stitch/intermediate/target_crop_*`
+- `faceswap/instantid_crop_stitch/intermediate/target_crop_region_mask_*`
+- `faceswap/instantid_crop_stitch/intermediate/target_crop_edit_mask_*`
+- `faceswap/instantid_crop_stitch/intermediate/target_crop_canny_*`
+- `faceswap/instantid_crop_stitch/intermediate/crop_inpaint_raw_*`
+- `faceswap/instantid_crop_stitch/intermediate/crop_composite_*`
+- `faceswap/instantid_crop_stitch/final_*`
+
+Swap-and-bake experiment checkpoints:
+- `faceswap/swap_and_bake/intermediate/reactor_swap_*`
+- `faceswap/swap_and_bake/intermediate/bake_mask_*`
+- `faceswap/swap_and_bake/final_*`
+
+Visual-prompt hybrid fallback checkpoints:
+- `faceswap/visual_prompt_hybrid/intermediate/target_head_mask_*`
+- `faceswap/visual_prompt_hybrid/intermediate/generated_head_*`
+- `faceswap/visual_prompt_hybrid/intermediate/reactor_snap_*`
+- `faceswap/visual_prompt_hybrid/intermediate/bake_mask_*`
+- `faceswap/visual_prompt_hybrid/final_*`
 
 ComfyUI may cache unchanged branches. If a manual rerun appears not to write a fresh file, change an input, change `--filename-prefix` / `--intermediate-prefix`, or clear the server cache.
 

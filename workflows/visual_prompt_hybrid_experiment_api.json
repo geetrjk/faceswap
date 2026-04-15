@@ -1,0 +1,282 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "subject_5 year curly.webp"
+    }
+  },
+  "2": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "superman.png"
+    }
+  },
+  "3": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "sd_xl_base_1.0_inpainting_0.1.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "3",
+        1
+      ],
+      "text": "comic book illustration, cinematic superhero portrait, preserve the source child identity exactly, curly dark hair, big toothy smile, warm brown skin tone, bright happy expression, young child face, rounded cheeks, clean facial features, cohesive lighting"
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "3",
+        1
+      ],
+      "text": "adult face, target hairstyle, slicked hair, straight hair, flat hair, closed mouth, neutral expression, pale skin, desaturated skin, gray face plate, blank face, faceless, abstract artifacts, green glitch, blur, malformed eyes, seam, watermark, text"
+    }
+  },
+  "6": {
+    "class_type": "FaceAnalysisModels",
+    "inputs": {
+      "library": "insightface",
+      "provider": "CUDA"
+    }
+  },
+  "7": {
+    "class_type": "FaceSegmentation",
+    "inputs": {
+      "analysis_models": [
+        "6",
+        0
+      ],
+      "image": [
+        "2",
+        0
+      ],
+      "area": "face+forehead (if available)",
+      "grow": 34,
+      "grow_tapered": true,
+      "blur": 21
+    }
+  },
+  "8": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "7",
+        0
+      ]
+    }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "8",
+        0
+      ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/true_stack_20260415_231200/intermediate/target_face_mask_coarse"
+    }
+  },
+  "10": {
+    "class_type": "GrowMask",
+    "inputs": {
+      "mask": [
+        "7",
+        0
+      ],
+      "expand": 40,
+      "tapered_corners": true
+    }
+  },
+  "11": {
+    "class_type": "FeatherMask",
+    "inputs": {
+      "mask": [
+        "10",
+        0
+      ],
+      "left": 28,
+      "top": 28,
+      "right": 28,
+      "bottom": 28
+    }
+  },
+  "12": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "11",
+        0
+      ]
+    }
+  },
+  "13": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "12",
+        0
+      ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/true_stack_20260415_231200/intermediate/target_face_mask_final"
+    }
+  },
+  "14": {
+    "class_type": "PulidModelLoader",
+    "inputs": {
+      "pulid_file": "ip-adapter_pulid_sdxl_fp16.safetensors"
+    }
+  },
+  "15": {
+    "class_type": "PulidEvaClipLoader",
+    "inputs": {}
+  },
+  "16": {
+    "class_type": "PulidInsightFaceLoader",
+    "inputs": {
+      "provider": "CUDA"
+    }
+  },
+  "17": {
+    "class_type": "ApplyPulidAdvanced",
+    "inputs": {
+      "model": [
+        "3",
+        0
+      ],
+      "pulid": [
+        "14",
+        0
+      ],
+      "eva_clip": [
+        "15",
+        0
+      ],
+      "face_analysis": [
+        "16",
+        0
+      ],
+      "image": [
+        "1",
+        0
+      ],
+      "weight": 1.0,
+      "projection": "ortho_v2",
+      "fidelity": 8,
+      "noise": 0.0,
+      "start_at": 0.0,
+      "end_at": 1.0,
+      "attn_mask": [
+        "11",
+        0
+      ]
+    }
+  },
+  "18": {
+    "class_type": "IPAdapterUnifiedLoader",
+    "inputs": {
+      "model": [
+        "17",
+        0
+      ],
+      "preset": "PLUS FACE (portraits)"
+    }
+  },
+  "19": {
+    "class_type": "IPAdapterAdvanced",
+    "inputs": {
+      "model": [
+        "18",
+        0
+      ],
+      "ipadapter": [
+        "18",
+        1
+      ],
+      "image": [
+        "1",
+        0
+      ],
+      "weight": 0.6,
+      "weight_type": "style transfer precise",
+      "combine_embeds": "concat",
+      "start_at": 0.0,
+      "end_at": 0.7,
+      "embeds_scaling": "V only",
+      "attn_mask": [
+        "11",
+        0
+      ]
+    }
+  },
+  "20": {
+    "class_type": "VAEEncodeForInpaint",
+    "inputs": {
+      "pixels": [
+        "2",
+        0
+      ],
+      "vae": [
+        "3",
+        2
+      ],
+      "mask": [
+        "11",
+        0
+      ],
+      "grow_mask_by": 16
+    }
+  },
+  "21": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "19",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "20",
+        0
+      ],
+      "seed": 981273412,
+      "steps": 28,
+      "cfg": 4.5,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "karras",
+      "denoise": 0.72
+    }
+  },
+  "22": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "21",
+        0
+      ],
+      "vae": [
+        "3",
+        2
+      ]
+    }
+  },
+  "23": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "22",
+        0
+      ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/true_stack_20260415_231200/final"
+    }
+  }
+}

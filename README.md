@@ -8,11 +8,15 @@ Subject-on-character face swap workflow for ComfyUI with:
 ## What is included
 
 - `scripts/build_faceswap_workflow.py`: generates a ComfyUI API workflow JSON.
+- `scripts/build_instantid_workflow.py`: generates a separate experimental SDXL + InstantID workflow.
 - `scripts/simplepod.py`: profiles, deploys, and preflights the SimplePod ComfyUI instance.
 - `workflows/faceswap_subject_on_character_api.json`: API prompt for automated queueing.
 - `workflows/faceswap_subject_on_character_ui.json`: browser-runnable ComfyUI graph for manual review.
+- `workflows/instantid_subject_pose_style_api.json`: experimental API prompt for subject-first InstantID generation.
+- `workflows/instantid_subject_pose_style_ui.json`: browser-runnable experimental InstantID graph.
 - `.agents/skills/remote-operator/SKILL.md`: reusable remote-operation checklist.
 - `docs/runbook.md`: run steps for local ComfyUI and SimplePod usage.
+- `docs/instantid_experiment.md`: setup notes for the subject-first InstantID alternative.
 - `docs/known_mistakes.md`: compact ledger of mistakes and fixes to avoid repeating.
 
 ## Workflow strategy
@@ -23,6 +27,18 @@ Subject-on-character face swap workflow for ComfyUI with:
 4. Save the base swap output as `faceswap/final_*`.
 
 This is intentionally smaller than the earlier diffusion/detailer idea. On a 12 GB SimplePod GPU, the first milestone is a reliable base swap; diffusion cleanup can be added after that works.
+
+## Experimental InstantID path
+
+The ReActor workflow remains the baseline. For subject-first generation that tries to keep the subject's age cues, head shape, and hairstyle while taking pose/style from the target, use the separate InstantID builder:
+
+```bash
+python3 scripts/build_instantid_workflow.py
+.venv/bin/python scripts/simplepod.py deploy-instantid
+.venv/bin/python scripts/simplepod.py preflight-instantid
+```
+
+This path requires additional SDXL base/inpaint, InstantID, ControlNet, AntelopeV2, and Buffalo-L face-analysis models. See `docs/instantid_experiment.md`.
 
 ## Generate or regenerate the workflow JSON
 
@@ -55,6 +71,16 @@ SIMPLEPOD_COMFYUI_URL=...
 ```
 
 Install the helper dependency in a local venv, profile the pod, deploy files, then preflight:
+
+For a fresh SimplePod server, use the setup script:
+
+```bash
+scripts/setup_simplepod_instantid.sh
+```
+
+It installs local helper dependencies, installs ReActor and InstantID requirements on the pod, deploys all workflow variants, pauses for the required ComfyUI/SimplePod restart, then runs preflight checks. Remote model downloads are size-checked and resumable, so rerunning the script should skip completed files and resume partial files instead of starting over.
+
+Manual equivalent for the ReActor baseline:
 
 ```bash
 python3 -m venv .venv
