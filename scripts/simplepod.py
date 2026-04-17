@@ -31,6 +31,7 @@ SWAP_AND_BAKE_WORKFLOW = ROOT / "workflows" / "swap_and_bake_experiment_api.json
 SWAP_AND_BAKE_UI_WORKFLOW = ROOT / "workflows" / "swap_and_bake_experiment_ui.json"
 VISUAL_PROMPT_HYBRID_WORKFLOW = ROOT / "workflows" / "visual_prompt_hybrid_experiment_api.json"
 VISUAL_PROMPT_HYBRID_UI_WORKFLOW = ROOT / "workflows" / "visual_prompt_hybrid_experiment_ui.json"
+REMOTE_SKIN_TONE_POSTPROCESS = ROOT / "scripts" / "remote_skin_tone_postprocess.py"
 INPUTS = [
     ROOT / "subject_5 year curly.webp",
     ROOT / "superman.png",
@@ -1129,6 +1130,65 @@ def run(_args) -> None:
             print(err, file=sys.stderr, end="")
 
 
+def postprocess_skin_tone(_args) -> None:
+    script = REMOTE_SKIN_TONE_POSTPROCESS.read_text(encoding="utf-8")
+    with connect() as client:
+        comfy_root = find_comfy_root(client)
+
+        def resolve(remote_path: str) -> str:
+            if remote_path.startswith("/"):
+                return remote_path
+            return posixpath.join(comfy_root, "output", remote_path)
+
+        payload = json.dumps(
+            {
+                "image": resolve(_args.image),
+                "candidate_mask": resolve(_args.candidate_mask),
+                "face_mask": resolve(_args.face_mask),
+                "output": resolve(_args.output),
+                "refined_mask_output": resolve(_args.refined_mask_output),
+                "threshold": _args.threshold,
+                "min_region_pixels": _args.min_region_pixels,
+                "dilate": _args.dilate,
+                "blur": _args.blur,
+                "strength": _args.strength,
+            }
+        )
+        remote_script = (
+            "import json, os, shlex, subprocess, sys, tempfile\n"
+            "payload = json.load(sys.stdin)\n"
+            f"script = {script!r}\n"
+            "with tempfile.NamedTemporaryFile('w', suffix='.py', delete=False) as handle:\n"
+            "    handle.write(script)\n"
+            "    path = handle.name\n"
+            "try:\n"
+            "    cmd = ['python3', path]\n"
+            "    for key in ['image', 'candidate_mask', 'face_mask', 'output', 'refined_mask_output', 'threshold', 'min_region_pixels', 'dilate', 'blur', 'strength']:\n"
+            "        cmd.extend([f'--{key.replace(\"_\", \"-\")}', str(payload[key])])\n"
+            "    proc = subprocess.run(cmd, text=True, capture_output=True)\n"
+            "    if proc.stdout:\n"
+            "        print(proc.stdout, end='')\n"
+            "    if proc.stderr:\n"
+            "        print(proc.stderr, file=sys.stderr, end='')\n"
+            "    raise SystemExit(proc.returncode)\n"
+            "finally:\n"
+            "    try:\n"
+            "        os.unlink(path)\n"
+            "    except FileNotFoundError:\n"
+            "        pass\n"
+        )
+        _, out, err = run_remote(
+            client,
+            f"python3 -c {shlex.quote(remote_script)}",
+            check=False,
+            stdin_data=payload,
+        )
+        if out:
+            print(out, end="")
+        if err:
+            print(err, file=sys.stderr, end="")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(required=True)
@@ -1167,6 +1227,18 @@ def main() -> None:
     run_parser = sub.add_parser("run")
     run_parser.add_argument("command", nargs=argparse.REMAINDER)
     run_parser.set_defaults(func=run)
+    skin_parser = sub.add_parser("postprocess-skin-tone")
+    skin_parser.add_argument("--image", required=True)
+    skin_parser.add_argument("--candidate-mask", required=True)
+    skin_parser.add_argument("--face-mask", required=True)
+    skin_parser.add_argument("--output", required=True)
+    skin_parser.add_argument("--refined-mask-output", required=True)
+    skin_parser.add_argument("--threshold", type=int, default=32)
+    skin_parser.add_argument("--min-region-pixels", type=int, default=600)
+    skin_parser.add_argument("--dilate", type=int, default=3)
+    skin_parser.add_argument("--blur", type=float, default=5.0)
+    skin_parser.add_argument("--strength", type=float, default=0.85)
+    skin_parser.set_defaults(func=postprocess_skin_tone)
     args = parser.parse_args()
     args.func(args)
 

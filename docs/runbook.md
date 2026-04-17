@@ -158,6 +158,8 @@ For the visual-prompt hybrid sidecar adapted to the current backend:
 
 For manual browser inspection, load `visual_prompt_hybrid_experiment_ui` from the `faceswap` workflow folder. The reference design expects PuLID, IP-Adapter Plus, and SAM/Impact nodes; the current live backend does not expose those nodes, so the checked-in sidecar uses the available fallback: FaceSegmentation target head mask, SDXL head fill, ReActor likeness snap, and low-denoise full-image bake.
 
+The current visual-prompt branch keeps exposed-skin harmonization outside the workflow tail. The workflow saves `pre_skin_harmonize` plus `target_skin_mask`, then `scripts/remote_skin_tone_postprocess.py` refines the semantic skin mask, excludes the already-solved face/neck region, and transfers the solved face tone onto exposed non-face skin deterministically.
+
 The InstantID path needs additional custom nodes and models. See `docs/instantid_experiment.md` before provisioning or queueing.
 
 Human-in-the-loop output checkpoints:
@@ -191,8 +193,12 @@ Swap-and-bake experiment checkpoints:
 Visual-prompt hybrid fallback checkpoints:
 - `faceswap/visual_prompt_hybrid/intermediate/target_head_mask_*`
 - `faceswap/visual_prompt_hybrid/intermediate/generated_head_*`
-- `faceswap/visual_prompt_hybrid/intermediate/reactor_snap_*`
-- `faceswap/visual_prompt_hybrid/intermediate/bake_mask_*`
+- `faceswap/visual_prompt_hybrid/intermediate/reactor_bake_*`
+- `faceswap/visual_prompt_hybrid/intermediate/inner_face_mask_*`
+- `faceswap/visual_prompt_hybrid/intermediate/pre_skin_harmonize_*`
+- `faceswap/visual_prompt_hybrid/intermediate/target_skin_mask_*`
+- `faceswap/visual_prompt_hybrid/intermediate/target_skin_mask_refined_*`
+- `faceswap/visual_prompt_hybrid/final_postprocess_*`
 - `faceswap/visual_prompt_hybrid/final_*`
 
 ComfyUI may cache unchanged branches. If a manual rerun appears not to write a fresh file, change an input, change `--filename-prefix` / `--intermediate-prefix`, or clear the server cache.

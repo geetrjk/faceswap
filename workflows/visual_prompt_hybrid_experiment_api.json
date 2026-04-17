@@ -392,6 +392,58 @@
         "29",
         0
       ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/pre_skin_harmonize"
+    }
+  },
+  "31": {
+    "class_type": "CLIPSeg",
+    "inputs": {
+      "image": [
+        "29",
+        0
+      ],
+      "text": "face, neck, ears, hands, arms, exposed skin",
+      "blur": 1.5,
+      "threshold": 0.22,
+      "dilation_factor": 2
+    }
+  },
+  "32": {
+    "class_type": "ImageToMask",
+    "inputs": {
+      "image": [
+        "31",
+        2
+      ],
+      "channel": "red"
+    }
+  },
+  "33": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "32",
+        0
+      ]
+    }
+  },
+  "34": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "33",
+        0
+      ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/target_skin_mask"
+    }
+  },
+  "35": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "29",
+        0
+      ],
       "filename_prefix": "faceswap/visual_prompt_hybrid/final"
     }
   }

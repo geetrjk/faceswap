@@ -144,6 +144,12 @@ Problem: The first true visual-prompt stack converted the `FaceSegmentation` mas
 
 Fix: Do not put `MaskToSEGS -> SAMDetectorCombined` on the active path for this workflow. Keep SAM installed and validated, but drive the current pipeline from the direct `FaceSegmentation -> GrowMask -> FeatherMask` mask until a better detector source is available.
 
+## Generative Exposed-Skin Tail Regressed To Gray Hands
+
+Problem: A masked low-denoise exposed-skin inpaint tail looked plausible architecturally, but on the real subject matrix it repainted the target hands into flat gray patches instead of matching the subject complexion.
+
+Fix: Keep the main workflow ending at the clean face-solved composite. Save a semantic exposed-skin mask for inspection, then run a deterministic postprocess that excludes the solved face/neck area, gates by broad skin-color plausibility, and transfers solved face tone onto the remaining exposed skin regions.
+
 ## Impact CLIPSeg Provider Is Not Self-Contained
 
 Problem: `CLIPSegDetectorProvider` can appear in `/object_info` through Impact Pack even when the actual `CLIPSeg` node is not installed. In that state, the workflow queues successfully but fails at runtime with `CLIPSeg custom node isn't installed`.

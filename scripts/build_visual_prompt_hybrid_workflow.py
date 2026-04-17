@@ -77,6 +77,10 @@ def build_workflow(
     inner_face_grow: int,
     inner_face_blur: int,
     secondary_inpaint_grow_mask_by: int,
+    skin_mask_text: str,
+    skin_mask_blur: float,
+    skin_mask_threshold: float,
+    skin_mask_dilation_factor: int,
     sampler_name: str,
     scheduler: str,
     filename_prefix: str,
@@ -236,7 +240,27 @@ def build_workflow(
                 "mask": link(23, 0),
             },
         ),
-        "30": api_node("SaveImage", {"images": link(29, 0), "filename_prefix": filename_prefix}),
+        "30": api_node(
+            "SaveImage",
+            {"images": link(29, 0), "filename_prefix": f"{intermediate_prefix}/pre_skin_harmonize"},
+        ),
+        "31": api_node(
+            "CLIPSeg",
+            {
+                "image": link(29, 0),
+                "text": skin_mask_text,
+                "blur": skin_mask_blur,
+                "threshold": skin_mask_threshold,
+                "dilation_factor": skin_mask_dilation_factor,
+            },
+        ),
+        "32": api_node("ImageToMask", {"image": link(31, 2), "channel": "red"}),
+        "33": api_node("MaskToImage", {"mask": link(32, 0)}),
+        "34": api_node(
+            "SaveImage",
+            {"images": link(33, 0), "filename_prefix": f"{intermediate_prefix}/target_skin_mask"},
+        ),
+        "35": api_node("SaveImage", {"images": link(29, 0), "filename_prefix": filename_prefix}),
     }
 
 
@@ -272,6 +296,10 @@ def build_ui_workflow(
     inner_face_grow: int,
     inner_face_blur: int,
     secondary_inpaint_grow_mask_by: int,
+    skin_mask_text: str,
+    skin_mask_blur: float,
+    skin_mask_threshold: float,
+    skin_mask_dilation_factor: int,
     sampler_name: str,
     scheduler: str,
     filename_prefix: str,
@@ -325,12 +353,16 @@ def build_ui_workflow(
         [45, 23, 0, 29, 5, "MASK"],
         [46, 29, 0, 30, 0, "IMAGE"],
         [47, 29, 0, 31, 0, "IMAGE"],
+        [48, 31, 2, 32, 0, "IMAGE"],
+        [49, 32, 0, 33, 0, "MASK"],
+        [50, 33, 0, 34, 0, "IMAGE"],
+        [51, 29, 0, 35, 0, "IMAGE"],
     ]
     return {
         "id": "visual-prompt-hybrid-experiment-ui",
         "revision": 0,
-        "last_node_id": 31,
-        "last_link_id": 47,
+        "last_node_id": 35,
+        "last_link_id": 51,
         "nodes": [
             node(1, "LoadImage", [60, 80], 0, outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [14, 19, 29]}], widgets_values=[subject_image, "image"], title="Load Source Identity"),
             node(2, "LoadImage", [60, 360], 1, outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [3, 7]}], widgets_values=[target_image, "image"], title="Load Target Template"),
@@ -361,8 +393,12 @@ def build_ui_workflow(
             node(27, "KSampler", [5080, 1280], 26, inputs=[{"name": "model", "type": "MODEL", "link": 37}, {"name": "positive", "type": "CONDITIONING", "link": 38}, {"name": "negative", "type": "CONDITIONING", "link": 39}, {"name": "latent_image", "type": "LATENT", "link": 40}], outputs=[{"name": "LATENT", "type": "LATENT", "links": [41]}], widgets_values=[secondary_seed, "fixed", secondary_steps, secondary_cfg, sampler_name, scheduler, secondary_denoise], title="Low-Denoise Seam Bake"),
             node(28, "VAEDecode", [5480, 1280], 27, inputs=[{"name": "samples", "type": "LATENT", "link": 41}, {"name": "vae", "type": "VAE", "link": 42}], outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [44]}], title="Decode Seam Bake"),
             node(29, "ImageCompositeMasked", [5880, 1280], 28, inputs=[{"name": "destination", "type": "IMAGE", "link": 43}, {"name": "source", "type": "IMAGE", "link": 44}, {"name": "mask", "type": "MASK", "link": 45}], outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [46, 47]}], widgets_values=[0, 0, False], title="Blend Inner Face Back"),
-            node(30, "SaveImage", [6280, 1200], 29, inputs=[{"name": "images", "type": "IMAGE", "link": 46}], widgets_values=[filename_prefix], title="Save Final Result"),
-            node(31, "PreviewImage", [6280, 1360], 30, inputs=[{"name": "images", "type": "IMAGE", "link": 47}], title="Preview Final"),
+            node(30, "SaveImage", [6280, 1140], 29, inputs=[{"name": "images", "type": "IMAGE", "link": 46}], widgets_values=[f"{intermediate_prefix}/pre_skin_harmonize"], title="Save Pre-Skin Harmonize"),
+            node(31, "CLIPSeg", [6280, 1460], 30, inputs=[{"name": "image", "type": "IMAGE", "link": 47}], outputs=[{"name": "Mask", "type": "MASK", "links": None}, {"name": "Heatmap Mask", "type": "IMAGE", "links": None}, {"name": "BW Mask", "type": "IMAGE", "links": [48]}], widgets_values=[skin_mask_text, skin_mask_blur, skin_mask_threshold, skin_mask_dilation_factor], title="Semantic Exposed Skin Mask"),
+            node(32, "ImageToMask", [6680, 1460], 31, inputs=[{"name": "image", "type": "IMAGE", "link": 48}], outputs=[{"name": "MASK", "type": "MASK", "links": [49]}], widgets_values=["red"], title="Normalize Skin Mask"),
+            node(33, "MaskToImage", [7040, 1400], 32, inputs=[{"name": "mask", "type": "MASK", "link": 49}], outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [50]}], title="Convert Skin Mask"),
+            node(34, "SaveImage", [7400, 1400], 33, inputs=[{"name": "images", "type": "IMAGE", "link": 50}], widgets_values=[f"{intermediate_prefix}/target_skin_mask"], title="Save Exposed Skin Mask"),
+            node(35, "SaveImage", [7760, 1520], 34, inputs=[{"name": "images", "type": "IMAGE", "link": 51}], widgets_values=[filename_prefix], title="Save Final Result"),
         ],
         "links": links,
         "groups": [],
@@ -370,7 +406,8 @@ def build_ui_workflow(
         "extra": {
             "note": (
                 "Rebuilt visual prompt stack: semantic CLIPSeg head mask -> PuLID + structural "
-                "IP-Adapter primary generation -> ReActor likeness bake -> low-denoise inner-face seam blend."
+                "IP-Adapter primary generation -> ReActor likeness bake -> low-denoise inner-face seam blend. "
+                "Exposed skin harmonization is handled by the remote deterministic postprocess helper."
             )
         },
         "version": 0.4,
@@ -423,6 +460,10 @@ def main() -> None:
     parser.add_argument("--inner-face-grow", type=int, default=12)
     parser.add_argument("--inner-face-blur", type=int, default=10)
     parser.add_argument("--secondary-inpaint-grow-mask-by", type=int, default=6)
+    parser.add_argument("--skin-mask-text", default="face, neck, ears, hands, arms, exposed skin")
+    parser.add_argument("--skin-mask-blur", type=float, default=1.5)
+    parser.add_argument("--skin-mask-threshold", type=float, default=0.22)
+    parser.add_argument("--skin-mask-dilation-factor", type=int, default=2)
     parser.add_argument("--sampler-name", default="dpmpp_2m_sde")
     parser.add_argument("--scheduler", default="karras")
     parser.add_argument("--filename-prefix", default="faceswap/visual_prompt_hybrid/final")

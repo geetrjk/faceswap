@@ -115,6 +115,34 @@ def main() -> None:
             print(queued.stderr, file=sys.stderr, end="")
 
         outputs = parse_outputs(queued.stdout)
+        pre_skin = next(path for path in outputs if path.endswith("/intermediate/pre_skin_harmonize_00001_.png"))
+        candidate_mask = next(path for path in outputs if path.endswith("/intermediate/target_skin_mask_00001_.png"))
+        face_mask = next(path for path in outputs if path.endswith("/intermediate/inner_face_mask_00001_.png"))
+        harmonized_remote = f"{run_dir}/final_postprocess_00001_.png"
+        refined_mask_remote = f"{run_dir}/intermediate/target_skin_mask_refined_00001_.png"
+        post = run(
+            [
+                sys.executable,
+                str(SIMPLEPOD_SCRIPT),
+                "postprocess-skin-tone",
+                "--image",
+                pre_skin,
+                "--candidate-mask",
+                candidate_mask,
+                "--face-mask",
+                face_mask,
+                "--output",
+                harmonized_remote,
+                "--refined-mask-output",
+                refined_mask_remote,
+            ],
+            capture_output=True,
+        )
+        print(post.stdout, end="")
+        if post.stderr:
+            print(post.stderr, file=sys.stderr, end="")
+        outputs.extend([harmonized_remote, refined_mask_remote])
+
         subject_dir = local_dir / slug
         subject_dir.mkdir(parents=True, exist_ok=True)
         for remote_path in outputs:

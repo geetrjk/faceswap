@@ -40,6 +40,23 @@ python3 scripts/build_instantid_workflow.py
 
 This path requires additional SDXL base/inpaint, InstantID, ControlNet, AntelopeV2, and Buffalo-L face-analysis models. See `docs/instantid_experiment.md`.
 
+## Visual Prompt Hybrid Path
+
+For the broader subject-first SDXL branch with semantic masking, PuLID/IP-Adapter guidance, and deterministic exposed-skin tone harmonization, use:
+
+```bash
+python3 scripts/build_visual_prompt_hybrid_workflow.py
+.venv/bin/python scripts/simplepod.py deploy-visual-prompt-hybrid
+.venv/bin/python scripts/simplepod.py preflight-visual-prompt
+```
+
+The current visual-prompt pipeline uses two stages:
+
+- the ComfyUI workflow generates the clean face-solved composite and saves `pre_skin_harmonize` plus `target_skin_mask`,
+- `scripts/remote_skin_tone_postprocess.py` refines that mask, excludes the face/neck region, and transfers solved face tone onto exposed non-face skin regions deterministically.
+
+This replaced the earlier masked generative skin inpaint tail, which visually regressed into gray hand patches during matrix testing.
+
 ## Generate or regenerate the workflow JSON
 
 ```bash

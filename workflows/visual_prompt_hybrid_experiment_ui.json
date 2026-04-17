@@ -1,8 +1,8 @@
 {
   "id": "visual-prompt-hybrid-experiment-ui",
   "revision": 0,
-  "last_node_id": 31,
-  "last_link_id": 47,
+  "last_node_id": 35,
+  "last_link_id": 51,
   "nodes": [
     {
       "id": 1,
@@ -1214,7 +1214,7 @@
       "type": "SaveImage",
       "pos": [
         6280,
-        1200
+        1140
       ],
       "size": [
         340,
@@ -1233,16 +1233,16 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "faceswap/visual_prompt_hybrid/final"
+        "faceswap/visual_prompt_hybrid/intermediate/pre_skin_harmonize"
       ],
-      "title": "Save Final Result"
+      "title": "Save Pre-Skin Harmonize"
     },
     {
       "id": 31,
-      "type": "PreviewImage",
+      "type": "CLIPSeg",
       "pos": [
         6280,
-        1360
+        1460
       ],
       "size": [
         340,
@@ -1253,15 +1253,164 @@
       "mode": 0,
       "inputs": [
         {
-          "name": "images",
+          "name": "image",
           "type": "IMAGE",
           "link": 47
         }
       ],
-      "outputs": [],
+      "outputs": [
+        {
+          "name": "Mask",
+          "type": "MASK",
+          "links": null
+        },
+        {
+          "name": "Heatmap Mask",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "BW Mask",
+          "type": "IMAGE",
+          "links": [
+            48
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "face, neck, ears, hands, arms, exposed skin",
+        1.5,
+        0.22,
+        2
+      ],
+      "title": "Semantic Exposed Skin Mask"
+    },
+    {
+      "id": 32,
+      "type": "ImageToMask",
+      "pos": [
+        6680,
+        1460
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 31,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 48
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            49
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "red"
+      ],
+      "title": "Normalize Skin Mask"
+    },
+    {
+      "id": 33,
+      "type": "MaskToImage",
+      "pos": [
+        7040,
+        1400
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 32,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 49
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            50
+          ]
+        }
+      ],
       "properties": {},
       "widgets_values": [],
-      "title": "Preview Final"
+      "title": "Convert Skin Mask"
+    },
+    {
+      "id": 34,
+      "type": "SaveImage",
+      "pos": [
+        7400,
+        1400
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 33,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 50
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "faceswap/visual_prompt_hybrid/intermediate/target_skin_mask"
+      ],
+      "title": "Save Exposed Skin Mask"
+    },
+    {
+      "id": 35,
+      "type": "SaveImage",
+      "pos": [
+        7760,
+        1520
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 34,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 51
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "faceswap/visual_prompt_hybrid/final"
+      ],
+      "title": "Save Final Result"
     }
   ],
   "links": [
@@ -1640,12 +1789,44 @@
       31,
       0,
       "IMAGE"
+    ],
+    [
+      48,
+      31,
+      2,
+      32,
+      0,
+      "IMAGE"
+    ],
+    [
+      49,
+      32,
+      0,
+      33,
+      0,
+      "MASK"
+    ],
+    [
+      50,
+      33,
+      0,
+      34,
+      0,
+      "IMAGE"
+    ],
+    [
+      51,
+      29,
+      0,
+      35,
+      0,
+      "IMAGE"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
-    "note": "Rebuilt visual prompt stack: semantic CLIPSeg head mask -> PuLID + structural IP-Adapter primary generation -> ReActor likeness bake -> low-denoise inner-face seam blend."
+    "note": "Rebuilt visual prompt stack: semantic CLIPSeg head mask -> PuLID + structural IP-Adapter primary generation -> ReActor likeness bake -> low-denoise inner-face seam blend. Exposed skin harmonization is handled by the remote deterministic postprocess helper."
   },
   "version": 0.4
 }

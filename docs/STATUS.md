@@ -1,6 +1,6 @@
 # Status
 
-Updated: 2026-04-13
+Updated: 2026-04-17
 
 ## Current State
 
@@ -9,6 +9,8 @@ Updated: 2026-04-13
 - Workflow builder exists at `scripts/build_faceswap_workflow.py` and is the source of truth for both workflow JSON files.
 - Current local inputs are `subject_5 year curly.webp` and `superman.png`.
 - SimplePod env keys are expected in `.env`; secrets stay untracked.
+- Visual-prompt hybrid builder now stops at the clean face-solved composite and saves `pre_skin_harmonize` plus `target_skin_mask` for downstream skin-tone processing.
+- Subject-agnostic exposed-skin harmonization now runs as a deterministic remote postprocess: refine semantic skin mask -> exclude solved face/neck region -> gate by broad skin-color plausibility -> transfer solved face tone onto non-face exposed skin.
 
 ## Next Run
 
@@ -52,6 +54,14 @@ The ReActor baseline is validated, but the InstantID/crop-stitch branch is still
   - API: `workflows/visual_prompt_hybrid_experiment_api.json`
   - UI: `workflows/visual_prompt_hybrid_experiment_ui.json`
   - Deploy helper: `.venv/bin/python scripts/simplepod.py deploy-visual-prompt-hybrid`
+- Exposed-skin method review on the visual-prompt branch:
+  - Method 1: masked low-denoise generative skin inpaint in the workflow.
+  - Result: failed across the full subject matrix and collapsed the target hands into flat gray patches.
+  - Method 2: deterministic postprocess using semantic exposed-skin mask + face-mask exclusion + skin-color gating + face-tone transfer.
+  - Result: worked across all current test subjects and preserved the target body structure.
+  - Stronger variant (`--strength 1.0`) was also tested and did not improve materially over the default blend.
+- Added `scripts/remote_skin_tone_postprocess.py` and `scripts/simplepod.py postprocess-skin-tone` so the exposed-skin correction runs on the remote pod after the main workflow finishes.
+- `scripts/run_visual_prompt_subject_matrix.py` now runs that postprocess automatically and downloads `final_postprocess_*.png` plus `target_skin_mask_refined_*.png` with each subject result set.
 - The requested reference architecture uses PuLID, IP-Adapter Plus, and SAM/Impact nodes, but the live `8188` backend did not expose those nodes. The checked-in workflow is therefore a runnable environment fallback with the same high-level automation shape: FaceSegmentation target head mask, SDXL head fill, ReActor likeness snap, and low-denoise full-image bake.
 - Visual-prompt hybrid fallback prompt `ed427fcd-b0ff-4c4f-871c-28a883f08b9b` completed successfully on `8188`.
   - Local inspection set: `test_outputs/visual_prompt_hybrid_20260413/`.
