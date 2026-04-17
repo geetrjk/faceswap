@@ -32,10 +32,19 @@ SWAP_AND_BAKE_UI_WORKFLOW = ROOT / "workflows" / "swap_and_bake_experiment_ui.js
 VISUAL_PROMPT_HYBRID_WORKFLOW = ROOT / "workflows" / "visual_prompt_hybrid_experiment_api.json"
 VISUAL_PROMPT_HYBRID_UI_WORKFLOW = ROOT / "workflows" / "visual_prompt_hybrid_experiment_ui.json"
 REMOTE_SKIN_TONE_POSTPROCESS = ROOT / "scripts" / "remote_skin_tone_postprocess.py"
-INPUTS = [
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+DEFAULT_INPUTS = [
     ROOT / "subject_5 year curly.webp",
-    ROOT / "superman.png",
 ]
+ROOT_IMAGE_INPUTS = sorted(
+    path
+    for path in ROOT.iterdir()
+    if path.is_file() and not path.name.startswith(".") and path.suffix.lower() in IMAGE_SUFFIXES
+)
+INPUTS: list[Path] = []
+for path in [*DEFAULT_INPUTS, *ROOT_IMAGE_INPUTS]:
+    if path.exists() and path not in INPUTS:
+        INPUTS.append(path)
 VISUAL_PROMPT_INPUTS = [
     *INPUTS,
     *sorted(path for path in TEST_SUBJECTS_DIR.iterdir() if path.is_file() and not path.name.startswith(".")),
@@ -1104,18 +1113,30 @@ raise SystemExit(2)
 def download(_args) -> None:
     local_dir = Path(_args.local_dir)
     local_dir.mkdir(parents=True, exist_ok=True)
-    with connect() as client:
-        comfy_root = find_comfy_root(client)
-        remote_path = _args.remote_path
-        if not remote_path.startswith("/"):
-            remote_path = posixpath.join(comfy_root, "output", remote_path)
-        local_path = local_dir / posixpath.basename(remote_path)
-        sftp = client.open_sftp()
+    attempts = 3
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
         try:
-            sftp.get(remote_path, str(local_path))
-        finally:
-            sftp.close()
-        print(local_path)
+            with connect() as client:
+                comfy_root = find_comfy_root(client)
+                remote_path = _args.remote_path
+                if not remote_path.startswith("/"):
+                    remote_path = posixpath.join(comfy_root, "output", remote_path)
+                local_path = local_dir / posixpath.basename(remote_path)
+                sftp = client.open_sftp()
+                try:
+                    sftp.get(remote_path, str(local_path))
+                finally:
+                    sftp.close()
+                print(local_path)
+                return
+        except Exception as exc:
+            last_error = exc
+            if attempt == attempts:
+                break
+            print(f"Download retry {attempt}/{attempts - 1} for {_args.remote_path}: {exc}", file=sys.stderr)
+            time.sleep(2)
+    raise SystemExit(f"Download failed after {attempts} attempts: {last_error}")
 
 
 def run(_args) -> None:
@@ -1234,7 +1255,7 @@ def main() -> None:
     skin_parser.add_argument("--output", required=True)
     skin_parser.add_argument("--refined-mask-output", required=True)
     skin_parser.add_argument("--threshold", type=int, default=32)
-    skin_parser.add_argument("--min-region-pixels", type=int, default=600)
+    skin_parser.add_argument("--min-region-pixels", type=int, default=2500)
     skin_parser.add_argument("--dilate", type=int, default=3)
     skin_parser.add_argument("--blur", type=float, default=5.0)
     skin_parser.add_argument("--strength", type=float, default=0.85)

@@ -365,16 +365,16 @@ def main() -> None:
         "--positive-prompt",
         default=(
             "local head and face crop of the same target character, replace the face with a young child with curly hair, "
-            "preserve head angle, crop framing, surrounding hair silhouette, neck transition, comic book illustration style"
+            "preserve head angle, crop framing, surrounding hair silhouette, neck transition, preserve the target illustration style"
         ),
     )
     parser.add_argument(
         "--negative-prompt",
         default=(
             "changed body, changed costume, changed cape, changed pose, changed background, full body transformation, "
-            "adult face, older person, square jaw, straight hair, target face identity, superman face, beard, "
-            "mustache, hard mask edge, visible seam, distorted face, blank face, gray face, missing eyes, "
-            "missing mouth, faceless, mask plate, flat color, watermark, text"
+            "target face identity, target-specific facial structure, target-specific hairstyle, adult face, older person, "
+            "beard, mustache, strong jawline, hard mask edge, visible seam, distorted face, blank face, gray face, "
+            "missing eyes, missing mouth, faceless, mask plate, flat color, watermark, text"
         ),
     )
     parser.add_argument("--steps", type=int, default=34)

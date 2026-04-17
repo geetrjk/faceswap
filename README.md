@@ -57,6 +57,8 @@ The current visual-prompt pipeline uses two stages:
 
 This replaced the earlier masked generative skin inpaint tail, which visually regressed into gray hand patches during matrix testing.
 
+The deploy helper now uploads all root-level image assets automatically, so adding a new target such as `spiderman.png` does not require hand-editing `scripts/simplepod.py` first.
+
 ## Generate or regenerate the workflow JSON
 
 ```bash

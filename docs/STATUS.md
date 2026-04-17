@@ -1,16 +1,17 @@
 # Status
 
-Updated: 2026-04-17
+Updated: 2026-04-18
 
 ## Current State
 
 - API workflow exists at `workflows/faceswap_subject_on_character_api.json`.
 - UI workflow exists at `workflows/faceswap_subject_on_character_ui.json`.
 - Workflow builder exists at `scripts/build_faceswap_workflow.py` and is the source of truth for both workflow JSON files.
-- Current local inputs are `subject_5 year curly.webp` and `superman.png`.
+- Current local inputs include `subject_5 year curly.webp`, `superman.png`, `superman adult.png`, and `spiderman.png`.
 - SimplePod env keys are expected in `.env`; secrets stay untracked.
 - Visual-prompt hybrid builder now stops at the clean face-solved composite and saves `pre_skin_harmonize` plus `target_skin_mask` for downstream skin-tone processing.
-- Subject-agnostic exposed-skin harmonization now runs as a deterministic remote postprocess: refine semantic skin mask -> exclude solved face/neck region -> gate by broad skin-color plausibility -> transfer solved face tone onto non-face exposed skin.
+- Subject-agnostic exposed-skin harmonization now runs as a deterministic remote postprocess: refine semantic skin mask -> exclude solved face/neck region -> gate by broad skin-color plausibility, face-tone compatibility, texture smoothness, and minimum meaningful area -> transfer solved face tone onto non-face exposed skin.
+- Current repo state is shutdown-safe: workflows, scripts, docs, and the new `spiderman.png` target asset are saved locally and ready to redeploy in the next session.
 
 ## Next Run
 
@@ -60,6 +61,13 @@ The ReActor baseline is validated, but the InstantID/crop-stitch branch is still
   - Method 2: deterministic postprocess using semantic exposed-skin mask + face-mask exclusion + skin-color gating + face-tone transfer.
   - Result: worked across all current test subjects and preserved the target body structure.
   - Stronger variant (`--strength 1.0`) was also tested and did not improve materially over the default blend.
+- New target-agnostic validation on the visual-prompt branch:
+  - Added `spiderman.png` as a second target and reran the subject matrix on port `8191`.
+  - Initial Spider-Man run showed that the exposed-skin postprocess still treated red webbed gloves as candidate skin, so the pipeline was not yet target-agnostic.
+  - Fixed that by making root-level target deployment automatic, labeling matrix runs by target slug, tightening the skin-color gate, adding a texture-smoothness gate, and requiring a minimum meaningful non-face skin area before harmonization.
+  - Final Spider-Man matrix now skips exposed-skin harmonization for all four current test subjects with `STATUS=skipped` / `REASON=no_non_face_skin`, which is the correct behavior for a fully covered suit.
+  - Superman regression still reports a real non-face skin region (`PIXELS=18787` on the `7_year_old_face` check), so the exposed-skin pass still runs where it should.
+- Removed literal `superman face` prompt bias from the InstantID builder defaults so the older experimental branches are no longer hard-coded to the previous target.
 - Added `scripts/remote_skin_tone_postprocess.py` and `scripts/simplepod.py postprocess-skin-tone` so the exposed-skin correction runs on the remote pod after the main workflow finishes.
 - `scripts/run_visual_prompt_subject_matrix.py` now runs that postprocess automatically and downloads `final_postprocess_*.png` plus `target_skin_mask_refined_*.png` with each subject result set.
 - The requested reference architecture uses PuLID, IP-Adapter Plus, and SAM/Impact nodes, but the live `8188` backend did not expose those nodes. The checked-in workflow is therefore a runnable environment fallback with the same high-level automation shape: FaceSegmentation target head mask, SDXL head fill, ReActor likeness snap, and low-denoise full-image bake.

@@ -185,3 +185,15 @@ Fix: Filter `test_subjects` by real image suffixes and skip hidden files during 
 Problem: Different subject runs all write `final_00001_.png` and similarly named intermediate files inside different remote subfolders. Downloading by basename only makes later subjects overwrite earlier local outputs.
 
 Fix: Download matrix outputs into a per-subject local subdirectory, or preserve the remote subfolder path when saving locally.
+
+## Covered Costume Hands Can Look Like Skin
+
+Problem: On the Spider-Man target, the first deterministic exposed-skin pass still classified red webbed gloves as skin-like candidate regions. The postprocess then tried to harmonize costume gloves even though the target had no real exposed body skin.
+
+Fix: Use a stricter exposed-skin refinement stack: exclude the solved face mask, apply tighter skin-color gating, require compatibility with the solved face tone, reject high-detail costume texture, and skip harmonization entirely when the remaining non-face skin region is too small to be meaningful.
+
+## New Targets Should Not Require Helper Edits
+
+Problem: The deploy helper originally hard-coded a short input file list, so adding a new target image such as `spiderman.png` required editing `scripts/simplepod.py` before the remote pod could queue it.
+
+Fix: Discover root-level image assets dynamically for deployment and keep matrix outputs labeled by target slug so new targets can be validated without helper surgery or output collisions.

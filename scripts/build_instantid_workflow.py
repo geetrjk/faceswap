@@ -276,17 +276,17 @@ def main() -> None:
         "--positive-prompt",
         default=(
             "the same target character and body, only the face replaced by a young child with curly hair, "
-            "preserve the original superhero suit, cape, body, pose, background, lighting, and composition, "
-            "seamless face and neck blend, comic book illustration style"
+            "preserve the target costume, body, pose, background, lighting, and composition, "
+            "seamless face and neck blend, preserve the target illustration style"
         ),
     )
     parser.add_argument(
         "--negative-prompt",
         default=(
             "changed body, changed costume, changed cape, changed pose, changed background, full body transformation, "
-            "adult face, older person, square jaw, straight hair, target face identity, superman face, beard, "
-            "mustache, hard mask edge, visible seam, distorted face, blank face, gray face, missing eyes, "
-            "missing mouth, faceless, mask plate, flat color, watermark, text"
+            "target face identity, target-specific facial structure, target-specific hairstyle, adult face, older person, "
+            "beard, mustache, strong jawline, hard mask edge, visible seam, distorted face, blank face, gray face, "
+            "missing eyes, missing mouth, faceless, mask plate, flat color, watermark, text"
         ),
     )
     parser.add_argument("--steps", type=int, default=34)

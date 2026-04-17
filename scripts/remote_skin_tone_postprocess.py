@@ -40,6 +40,35 @@ def rgb_to_ycbcr(rgb: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     return y, cb, cr
 
 
+def rgb_to_hsv(rgb: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    rgb_f = rgb.astype(np.float32) / 255.0
+    r = rgb_f[..., 0]
+    g = rgb_f[..., 1]
+    b = rgb_f[..., 2]
+
+    max_c = np.maximum.reduce([r, g, b])
+    min_c = np.minimum.reduce([r, g, b])
+    delta = max_c - min_c
+
+    hue = np.zeros_like(max_c)
+    nonzero = delta > 1e-6
+
+    r_mask = nonzero & (max_c == r)
+    g_mask = nonzero & (max_c == g)
+    b_mask = nonzero & (max_c == b)
+
+    hue[r_mask] = ((g[r_mask] - b[r_mask]) / delta[r_mask]) % 6.0
+    hue[g_mask] = ((b[g_mask] - r[g_mask]) / delta[g_mask]) + 2.0
+    hue[b_mask] = ((r[b_mask] - g[b_mask]) / delta[b_mask]) + 4.0
+    hue /= 6.0
+
+    saturation = np.zeros_like(max_c)
+    valid_value = max_c > 1e-6
+    saturation[valid_value] = delta[valid_value] / max_c[valid_value]
+    value = max_c
+    return hue, saturation, value
+
+
 def skin_like_mask(rgb: np.ndarray) -> np.ndarray:
     r = rgb[..., 0].astype(np.int16)
     g = rgb[..., 1].astype(np.int16)
@@ -47,24 +76,31 @@ def skin_like_mask(rgb: np.ndarray) -> np.ndarray:
     max_c = np.maximum.reduce([r, g, b])
     min_c = np.minimum.reduce([r, g, b])
     y, cb, cr = rgb_to_ycbcr(rgb)
+    hue, saturation, value = rgb_to_hsv(rgb)
 
     rgb_rule = (
-        (r > 40)
-        & (g > 20)
-        & (b > 10)
-        & ((max_c - min_c) > 10)
-        & (np.abs(r - g) > 5)
+        (r > 60)
+        & (g > 35)
+        & (b > 20)
+        & ((max_c - min_c) > 15)
+        & (np.abs(r - g) > 10)
         & (r > g)
         & (r > b)
     )
     ycbcr_rule = (
-        (cr > 132)
-        & (cr < 180)
+        (cr > 135)
+        & (cr < 175)
         & (cb > 85)
-        & (cb < 140)
+        & (cb < 135)
         & (y > 40)
     )
-    return rgb_rule & ycbcr_rule
+    hsv_rule = (
+        (saturation > 0.08)
+        & (saturation < 0.65)
+        & (value > 0.20)
+        & ((hue < 0.14) | (hue > 0.94))
+    )
+    return rgb_rule & ycbcr_rule & hsv_rule
 
 
 def dilate(mask: np.ndarray, radius: int) -> np.ndarray:
@@ -81,6 +117,15 @@ def blur_mask(mask: np.ndarray, radius: float) -> np.ndarray:
     return np.asarray(img, dtype=np.float32) / 255.0
 
 
+def smooth_texture_mask(rgb: np.ndarray, *, blur_radius: float = 2.0, detail_threshold: float = 14.0) -> np.ndarray:
+    luma = Image.fromarray(rgb, mode="RGB").convert("L")
+    blurred = luma.filter(ImageFilter.GaussianBlur(blur_radius))
+    luma_arr = np.asarray(luma, dtype=np.float32)
+    blurred_arr = np.asarray(blurred, dtype=np.float32)
+    detail = np.abs(luma_arr - blurred_arr)
+    return detail <= detail_threshold
+
+
 def color_stats(rgb: np.ndarray, mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     pixels = rgb[mask]
     if len(pixels) == 0:
@@ -88,6 +133,30 @@ def color_stats(rgb: np.ndarray, mask: np.ndarray) -> tuple[np.ndarray, np.ndarr
     mean = pixels.mean(axis=0)
     std = pixels.std(axis=0)
     return mean, np.maximum(std, 1.0)
+
+
+def face_tone_compatible_mask(
+    rgb: np.ndarray,
+    source_mask: np.ndarray,
+    target_mask: np.ndarray,
+    *,
+    chroma_distance_limit: float = 22.0,
+    luminance_margin: float = 70.0,
+) -> np.ndarray:
+    y, cb, cr = rgb_to_ycbcr(rgb)
+    src_y = y[source_mask]
+    src_cb = cb[source_mask]
+    src_cr = cr[source_mask]
+    if len(src_y) == 0:
+        return np.zeros_like(target_mask, dtype=bool)
+
+    mean_cb = float(src_cb.mean())
+    mean_cr = float(src_cr.mean())
+    min_y = float(np.percentile(src_y, 2)) - luminance_margin
+    max_y = float(np.percentile(src_y, 98)) + luminance_margin
+
+    chroma_distance = np.sqrt((cb - mean_cb) ** 2 + (cr - mean_cr) ** 2)
+    return target_mask & (chroma_distance <= chroma_distance_limit) & (y >= min_y) & (y <= max_y)
 
 
 def harmonize(
@@ -117,7 +186,7 @@ def main() -> None:
     parser.add_argument("--output", required=True)
     parser.add_argument("--refined-mask-output", required=True)
     parser.add_argument("--threshold", type=int, default=32)
-    parser.add_argument("--min-region-pixels", type=int, default=600)
+    parser.add_argument("--min-region-pixels", type=int, default=2500)
     parser.add_argument("--dilate", type=int, default=3)
     parser.add_argument("--blur", type=float, default=5.0)
     parser.add_argument("--strength", type=float, default=0.85)
@@ -137,8 +206,12 @@ def main() -> None:
     candidate_mask &= ~dilate(face_mask, 12)
 
     # Reject semantic false positives such as gloves/sleeves by requiring the
-    # current pixels to look like skin in broad RGB + YCbCr ranges.
+    # current pixels to both look broadly like skin and stay reasonably close
+    # to the solved face tone. This keeps fully covered targets like Spider-Man
+    # from treating red gloves as exposed skin.
     refined_mask = candidate_mask & skin_like_mask(rgb)
+    refined_mask &= face_tone_compatible_mask(rgb, face_mask, refined_mask)
+    refined_mask &= smooth_texture_mask(rgb)
     if refined_mask.sum() < args.min_region_pixels:
         refined_mask = np.zeros_like(refined_mask, dtype=bool)
         save_mask(refined_mask, refined_mask_output_path)

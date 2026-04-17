@@ -57,7 +57,8 @@ def main() -> None:
         raise SystemExit(f"No subject images found in {subjects_dir}")
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    local_dir = Path(args.local_dir or ROOT / "test_outputs" / f"visual_prompt_subject_matrix_{stamp}")
+    target_slug = slugify(args.target_image)
+    local_dir = Path(args.local_dir or ROOT / "test_outputs" / f"visual_prompt_subject_matrix_{target_slug}_{stamp}")
     local_dir.mkdir(parents=True, exist_ok=True)
 
     if not args.skip_setup:
@@ -74,7 +75,7 @@ def main() -> None:
     results: list[dict[str, str | list[str]]] = []
     for subject in subjects:
         slug = slugify(subject.name)
-        run_dir = f"faceswap/visual_prompt_hybrid/subject_matrix_{stamp}/{slug}"
+        run_dir = f"faceswap/visual_prompt_hybrid/subject_matrix_{target_slug}_{stamp}/{slug}"
         workflow_path = local_dir / f"{slug}_api.json"
 
         run(
@@ -156,7 +157,14 @@ def main() -> None:
                     str(subject_dir),
                 ]
             )
-        results.append({"subject": subject.name, "outputs": outputs, "local_dir": str(subject_dir)})
+        results.append(
+            {
+                "subject": subject.name,
+                "target_image": args.target_image,
+                "outputs": outputs,
+                "local_dir": str(subject_dir),
+            }
+        )
 
     (local_dir / "results.json").write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
     print(f"Saved results to {local_dir}")
