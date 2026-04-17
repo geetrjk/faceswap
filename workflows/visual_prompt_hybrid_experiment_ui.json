@@ -151,7 +151,7 @@
       ],
       "properties": {},
       "widgets_values": [
-        "comic book illustration, cinematic superhero portrait, perfectly blended face, masterpiece, preserve the source child identity, curly dark hair, wide toothy smile, warm brown skin tone, youthful child face"
+        "comic book illustration, cinematic superhero portrait, perfectly blended face, cohesive lighting, preserve the source child identity, preserve the source facial expression, preserve the source hairstyle, masterpiece"
       ],
       "title": "Positive Prompt"
     },
@@ -188,7 +188,7 @@
       ],
       "properties": {},
       "widgets_values": [
-        "realistic photograph, abstract artifacts, poorly drawn, mismatched anatomy, green glitch, latent noise, visible seam, adult face, straight hair, flat hair, blank face, gray face plate"
+        "realistic photograph, abstract artifacts, poorly drawn, mismatched anatomy, green glitch, latent noise, visible seam, blank face, gray face plate, duplicate features, deformed eyes, distorted mouth"
       ],
       "title": "Negative Prompt"
     },
@@ -338,7 +338,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "faceswap/visual_prompt_hybrid/seambake_20260416_000708/intermediate/target_head_mask_semantic"
+        "faceswap/visual_prompt_hybrid/intermediate/target_head_mask_semantic"
       ],
       "title": "Save Semantic Head Mask"
     },
@@ -767,7 +767,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "faceswap/visual_prompt_hybrid/seambake_20260416_000708/intermediate/generated_head"
+        "faceswap/visual_prompt_hybrid/intermediate/generated_head"
       ],
       "title": "Save Generated Head"
     },
@@ -848,7 +848,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "faceswap/visual_prompt_hybrid/seambake_20260416_000708/intermediate/reactor_bake"
+        "faceswap/visual_prompt_hybrid/intermediate/reactor_bake"
       ],
       "title": "Save ReActor Bake"
     },
@@ -1021,7 +1021,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "faceswap/visual_prompt_hybrid/seambake_20260416_000708/intermediate/inner_face_mask"
+        "faceswap/visual_prompt_hybrid/intermediate/inner_face_mask"
       ],
       "title": "Save Inner Face Mask"
     },
@@ -1233,7 +1233,7 @@
       "outputs": [],
       "properties": {},
       "widgets_values": [
-        "faceswap/visual_prompt_hybrid/seambake_20260416_000708/final"
+        "faceswap/visual_prompt_hybrid/final"
       ],
       "title": "Save Final Result"
     },

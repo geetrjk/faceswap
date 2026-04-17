@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the rebuilt visual prompt hybrid workflow pair."""
+"""Generate the subject-agnostic visual prompt hybrid workflow pair."""
 
 from __future__ import annotations
 
@@ -387,15 +387,15 @@ def main() -> None:
     parser.add_argument(
         "--positive-prompt",
         default=(
-            "comic book illustration, cinematic superhero portrait, perfectly blended face, masterpiece, "
-            "preserve the source child identity, curly dark hair, wide toothy smile, warm brown skin tone, youthful child face"
+            "comic book illustration, cinematic superhero portrait, perfectly blended face, cohesive lighting, "
+            "preserve the source child identity, preserve the source facial expression, preserve the source hairstyle, masterpiece"
         ),
     )
     parser.add_argument(
         "--negative-prompt",
         default=(
             "realistic photograph, abstract artifacts, poorly drawn, mismatched anatomy, green glitch, latent noise, "
-            "visible seam, adult face, straight hair, flat hair, blank face, gray face plate"
+            "visible seam, blank face, gray face plate, duplicate features, deformed eyes, distorted mouth"
         ),
     )
     parser.add_argument("--semantic-mask-text", default="head, hair, ears, face, neck")

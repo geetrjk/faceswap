@@ -24,7 +24,7 @@
         "3",
         1
       ],
-      "text": "comic book illustration, cinematic superhero portrait, perfectly blended face, masterpiece, preserve the source child identity, curly dark hair, wide toothy smile, warm brown skin tone, youthful child face"
+      "text": "comic book illustration, cinematic superhero portrait, perfectly blended face, cohesive lighting, preserve the source child identity, preserve the source facial expression, preserve the source hairstyle, masterpiece"
     }
   },
   "5": {
@@ -34,7 +34,7 @@
         "3",
         1
       ],
-      "text": "realistic photograph, abstract artifacts, poorly drawn, mismatched anatomy, green glitch, latent noise, visible seam, adult face, straight hair, flat hair, blank face, gray face plate"
+      "text": "realistic photograph, abstract artifacts, poorly drawn, mismatched anatomy, green glitch, latent noise, visible seam, blank face, gray face plate, duplicate features, deformed eyes, distorted mouth"
     }
   },
   "6": {
@@ -76,7 +76,7 @@
         "8",
         0
       ],
-      "filename_prefix": "faceswap/visual_prompt_hybrid/seambake_20260416_000708/intermediate/target_head_mask_semantic"
+      "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/target_head_mask_semantic"
     }
   },
   "10": {
@@ -232,7 +232,7 @@
         "18",
         0
       ],
-      "filename_prefix": "faceswap/visual_prompt_hybrid/seambake_20260416_000708/intermediate/generated_head"
+      "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/generated_head"
     }
   },
   "20": {
@@ -266,7 +266,7 @@
         "20",
         0
       ],
-      "filename_prefix": "faceswap/visual_prompt_hybrid/seambake_20260416_000708/intermediate/reactor_bake"
+      "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/reactor_bake"
     }
   },
   "22": {
@@ -309,7 +309,7 @@
         "24",
         0
       ],
-      "filename_prefix": "faceswap/visual_prompt_hybrid/seambake_20260416_000708/intermediate/inner_face_mask"
+      "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/inner_face_mask"
     }
   },
   "26": {
@@ -392,7 +392,7 @@
         "29",
         0
       ],
-      "filename_prefix": "faceswap/visual_prompt_hybrid/seambake_20260416_000708/final"
+      "filename_prefix": "faceswap/visual_prompt_hybrid/final"
     }
   }
 }

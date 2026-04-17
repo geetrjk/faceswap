@@ -20,6 +20,7 @@ except ModuleNotFoundError:  # pragma: no cover - friendly CLI failure
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV_FILE = ROOT / ".env"
+TEST_SUBJECTS_DIR = ROOT / "test_subjects"
 WORKFLOW = ROOT / "workflows" / "faceswap_subject_on_character_api.json"
 UI_WORKFLOW = ROOT / "workflows" / "faceswap_subject_on_character_ui.json"
 INSTANTID_WORKFLOW = ROOT / "workflows" / "instantid_subject_pose_style_api.json"
@@ -33,6 +34,10 @@ VISUAL_PROMPT_HYBRID_UI_WORKFLOW = ROOT / "workflows" / "visual_prompt_hybrid_ex
 INPUTS = [
     ROOT / "subject_5 year curly.webp",
     ROOT / "superman.png",
+]
+VISUAL_PROMPT_INPUTS = [
+    *INPUTS,
+    *sorted(path for path in TEST_SUBJECTS_DIR.iterdir() if path.is_file() and not path.name.startswith(".")),
 ]
 REQUIRED_NODES = [
     "ReActorFaceSwap",
@@ -142,17 +147,33 @@ VISUAL_PROMPT_REQUIRED_MODEL_PATHS = [
     "models/insightface/models/antelopev2/glintr100.onnx",
     "models/insightface/models/antelopev2/scrfd_10g_bnkps.onnx",
 ]
+VISUAL_PROMPT_REQUIRED_NODES = [
+    "ApplyPulidAdvanced",
+    "CLIPSeg",
+    "FaceAnalysisModels",
+    "FaceSegmentation",
+    "ImageCompositeMasked",
+    "IPAdapterAdvanced",
+    "IPAdapterUnifiedLoader",
+    "PulidEvaClipLoader",
+    "PulidInsightFaceLoader",
+    "PulidModelLoader",
+    "ReActorFaceSwap",
+    "VAEEncodeForInpaint",
+]
 VISUAL_PROMPT_CUSTOM_NODES = {
     "ComfyUI_IPAdapter_plus": "https://github.com/cubiq/ComfyUI_IPAdapter_plus.git",
     "PuLID_ComfyUI": "https://github.com/cubiq/PuLID_ComfyUI.git",
     "ComfyUI-Impact-Pack": "https://github.com/ltdrdata/ComfyUI-Impact-Pack.git",
     "ComfyUI-CLIPSeg": "https://github.com/time-river/ComfyUI-CLIPSeg.git",
+    "ComfyUI_FaceAnalysis": "https://github.com/cubiq/ComfyUI_FaceAnalysis.git",
 }
 VISUAL_PROMPT_CUSTOM_NODE_ARCHIVES = {
     "ComfyUI_IPAdapter_plus": "https://codeload.github.com/cubiq/ComfyUI_IPAdapter_plus/zip/refs/heads/main",
     "PuLID_ComfyUI": "https://codeload.github.com/cubiq/PuLID_ComfyUI/zip/refs/heads/main",
     "ComfyUI-Impact-Pack": "https://codeload.github.com/ltdrdata/ComfyUI-Impact-Pack/zip/refs/heads/Main",
     "ComfyUI-CLIPSeg": "https://codeload.github.com/time-river/ComfyUI-CLIPSeg/zip/refs/heads/main",
+    "ComfyUI_FaceAnalysis": "https://codeload.github.com/cubiq/ComfyUI_FaceAnalysis/zip/refs/heads/main",
 }
 VISUAL_PROMPT_MODEL_URLS = {
     "models/checkpoints/sd_xl_base_1.0.safetensors": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors",
@@ -383,7 +404,7 @@ def deploy_swap_and_bake(_args) -> None:
 
 
 def deploy_visual_prompt_hybrid(_args) -> None:
-    for path in [VISUAL_PROMPT_HYBRID_WORKFLOW, VISUAL_PROMPT_HYBRID_UI_WORKFLOW, *INPUTS]:
+    for path in [VISUAL_PROMPT_HYBRID_WORKFLOW, VISUAL_PROMPT_HYBRID_UI_WORKFLOW, *VISUAL_PROMPT_INPUTS]:
         if not path.exists():
             raise SystemExit(f"Missing local file: {path}")
 
@@ -399,7 +420,7 @@ def deploy_visual_prompt_hybrid(_args) -> None:
                 remote_workflow = posixpath.join(workflow_dir, path.name)
                 print(f"Uploading {path.name} -> {remote_workflow}")
                 sftp.put(str(path), remote_workflow)
-            for path in INPUTS:
+            for path in VISUAL_PROMPT_INPUTS:
                 remote_path = posixpath.join(input_dir, path.name)
                 print(f"Uploading {path.name} -> {remote_path}")
                 sftp.put(str(path), remote_path)
@@ -407,6 +428,45 @@ def deploy_visual_prompt_hybrid(_args) -> None:
             sftp.close()
 
         print(f"Deployed visual-prompt hybrid experiment to {workflow_dir}")
+
+
+def preflight_visual_prompt(_args) -> None:
+    port = getattr(_args, "port", 8188)
+    with connect() as client:
+        comfy_root = find_comfy_root(client)
+        print(f"ComfyUI root: {comfy_root}")
+
+        model_checks = " ; ".join(
+            f"[ -f {shlex.quote(posixpath.join(comfy_root, rel))} ] && echo OK:{shlex.quote(rel)} || echo MISSING:{shlex.quote(rel)}"
+            for rel in VISUAL_PROMPT_REQUIRED_MODEL_PATHS
+        )
+        _, model_out, _ = run_remote(client, model_checks, check=False)
+        print("== Visual prompt model files ==")
+        print(model_out.strip())
+
+        object_info_cmd = (
+            "python3 - <<'PY'\n"
+            "import json, urllib.request\n"
+            "token_path = '/app/ComfyUI/login/PASSWORD'\n"
+            "token = ''\n"
+            "try:\n"
+            "    token = open(token_path, encoding='utf-8').readline().strip()\n"
+            "except FileNotFoundError:\n"
+            "    pass\n"
+            f"req = urllib.request.Request('http://127.0.0.1:{port}/object_info')\n"
+            "if token:\n"
+            "    req.add_header('Authorization', 'Bearer ' + token)\n"
+            "data = json.load(urllib.request.urlopen(req, timeout=10))\n"
+            f"wanted = {VISUAL_PROMPT_REQUIRED_NODES!r}\n"
+            "for name in wanted:\n"
+            "    print(('OK:' if name in data else 'MISSING:') + name)\n"
+            "PY"
+        )
+        code, node_out, node_err = run_remote(client, object_info_cmd, check=False)
+        print("== Visual prompt live node registry ==")
+        print((node_out or node_err).strip())
+        if code != 0:
+            print(f"Could not query local ComfyUI /object_info. Is ComfyUI running on port {port}?", file=sys.stderr)
 
 
 def init_auth(_args) -> None:
@@ -566,53 +626,6 @@ ensure_requirements() {{
   if [ -f "$path/requirements.txt" ]; then
     echo "Installing requirements for $path"
     python3 -m pip install --disable-pip-version-check --root-user-action=ignore -q -r "$path/requirements.txt"
-  fi
-}}
-
-ensure_python_module() {{
-  module_name="$1"
-  package_name="$2"
-  if python3 -c "import $module_name" >/dev/null 2>&1; then
-    echo "OK:python_module:$module_name"
-  else
-    echo "Installing python package $package_name for module $module_name"
-    python3 -m pip install --disable-pip-version-check --root-user-action=ignore -q "$package_name"
-  fi
-}}
-
-ensure_clipseg_init() {{
-  root="custom_nodes/ComfyUI-CLIPSeg"
-  if [ ! -f "$root/__init__.py" ] && [ -f "$root/custom_nodes/clipseg.py" ]; then
-    echo "Creating ComfyUI-CLIPSeg loader shim"
-    cat > "$root/__init__.py" <<'PY'
-from .custom_nodes.clipseg import CLIPSeg
-
-NODE_CLASS_MAPPINGS = {
-    "CLIPSeg": CLIPSeg,
-}
-
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "CLIPSeg": "CLIPSeg",
-}
-PY
-  fi
-}}
-
-ensure_clipseg_init() {{
-  root="custom_nodes/ComfyUI-CLIPSeg"
-  if [ ! -f "$root/__init__.py" ] && [ -f "$root/custom_nodes/clipseg.py" ]; then
-    echo "Creating ComfyUI-CLIPSeg loader shim"
-    cat > "$root/__init__.py" <<'PY'
-from .custom_nodes.clipseg import CLIPSeg
-
-NODE_CLASS_MAPPINGS = {
-    "CLIPSeg": CLIPSeg,
-}
-
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "CLIPSeg": "CLIPSeg",
-}
-PY
   fi
 }}
 
@@ -914,6 +927,7 @@ mkdir -p custom_nodes models/checkpoints models/clip_vision models/ipadapter mod
 ensure_requirements custom_nodes/ComfyUI_IPAdapter_plus
 ensure_requirements custom_nodes/PuLID_ComfyUI
 ensure_requirements custom_nodes/ComfyUI-Impact-Pack
+ensure_requirements custom_nodes/ComfyUI_FaceAnalysis
 ensure_python_module transformers transformers
 ensure_python_module scipy scipy
 ensure_python_module matplotlib matplotlib
@@ -945,6 +959,7 @@ required = [
     Path("custom_nodes/PuLID_ComfyUI"),
     Path("custom_nodes/ComfyUI-Impact-Pack"),
     Path("custom_nodes/ComfyUI-CLIPSeg"),
+    Path("custom_nodes/ComfyUI_FaceAnalysis"),
     Path("models/clip_vision/CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"),
     Path("models/ipadapter/ip-adapter-plus-face_sdxl_vit-h.safetensors"),
     Path("models/pulid/ip-adapter_pulid_sdxl_fp16.safetensors"),
@@ -1131,6 +1146,9 @@ def main() -> None:
     instantid_preflight_parser.add_argument("--port", type=int, default=8188)
     instantid_preflight_parser.add_argument("--crop-stitch", action="store_true")
     instantid_preflight_parser.set_defaults(func=preflight_instantid)
+    visual_preflight_parser = sub.add_parser("preflight-visual-prompt")
+    visual_preflight_parser.add_argument("--port", type=int, default=8188)
+    visual_preflight_parser.set_defaults(func=preflight_visual_prompt)
     sub.add_parser("install-instantid").set_defaults(func=install_instantid)
     sub.add_parser("install-visual-prompt-stack").set_defaults(func=install_visual_prompt_stack)
     sub.add_parser("install-reactor").set_defaults(func=install_reactor)

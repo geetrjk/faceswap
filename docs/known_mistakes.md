@@ -161,3 +161,21 @@ Fix: Create a small top-level loader shim that exports `NODE_CLASS_MAPPINGS = {"
 Problem: Installing only `ip-adapter-plus-face_sdxl_vit-h.safetensors` is not enough when the workflow uses the `STANDARD (medium strength)` preset. `IPAdapterUnifiedLoader` then fails at runtime with `IPAdapter model not found`.
 
 Fix: Install `models/ipadapter/ip-adapter_sdxl_vit-h.safetensors` in addition to the face-plus model whenever the workflow uses the standard SDXL preset.
+
+## Visual Prompt Stack Also Needs FaceAnalysis Nodes
+
+Problem: The visual-prompt installer originally brought up PuLID, IP-Adapter, CLIPSeg, and model assets, but the active workflow still depended on `FaceAnalysisModels` and `FaceSegmentation` for the final seam mask. On a fresh pod, preflight passed most checks but the live node registry still missed those classes.
+
+Fix: Treat `ComfyUI_FaceAnalysis` as part of the visual-prompt base install, not a separate InstantID-only dependency. Install it in `install-visual-prompt-stack`, then start a fresh backend before queueing.
+
+## Batch Subject Runs Must Ignore Non-Image Files
+
+Problem: `test_subjects` can contain local junk such as `.DS_Store`. A naive batch runner will treat that as a subject image, generate a broken workflow for it, and block the queue on the first invalid prompt.
+
+Fix: Filter `test_subjects` by real image suffixes and skip hidden files during both deploy and matrix-run discovery.
+
+## Matrix Downloads Can Overwrite Each Other
+
+Problem: Different subject runs all write `final_00001_.png` and similarly named intermediate files inside different remote subfolders. Downloading by basename only makes later subjects overwrite earlier local outputs.
+
+Fix: Download matrix outputs into a per-subject local subdirectory, or preserve the remote subfolder path when saving locally.
