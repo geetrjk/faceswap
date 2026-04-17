@@ -1,0 +1,398 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "subject_5 year curly.webp"
+    }
+  },
+  "2": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "superman.png"
+    }
+  },
+  "3": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "sd_xl_base_1.0_inpainting_0.1.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "3",
+        1
+      ],
+      "text": "comic book illustration, cinematic superhero portrait, perfectly blended face, cohesive lighting, preserve the source child identity, preserve the source facial expression, preserve the source hairstyle, masterpiece"
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "3",
+        1
+      ],
+      "text": "realistic photograph, abstract artifacts, poorly drawn, mismatched anatomy, green glitch, latent noise, visible seam, blank face, gray face plate, duplicate features, deformed eyes, distorted mouth"
+    }
+  },
+  "6": {
+    "class_type": "CLIPSeg",
+    "inputs": {
+      "image": [
+        "2",
+        0
+      ],
+      "text": "head, hair, ears, face, neck",
+      "blur": 1.5,
+      "threshold": 0.35,
+      "dilation_factor": 0
+    }
+  },
+  "7": {
+    "class_type": "ImageToMask",
+    "inputs": {
+      "image": [
+        "6",
+        2
+      ],
+      "channel": "red"
+    }
+  },
+  "8": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "7",
+        0
+      ]
+    }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "8",
+        0
+      ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/target_head_mask_semantic"
+    }
+  },
+  "10": {
+    "class_type": "VAEEncodeForInpaint",
+    "inputs": {
+      "pixels": [
+        "2",
+        0
+      ],
+      "vae": [
+        "3",
+        2
+      ],
+      "mask": [
+        "7",
+        0
+      ],
+      "grow_mask_by": 10
+    }
+  },
+  "11": {
+    "class_type": "PulidModelLoader",
+    "inputs": {
+      "pulid_file": "ip-adapter_pulid_sdxl_fp16.safetensors"
+    }
+  },
+  "12": {
+    "class_type": "PulidEvaClipLoader",
+    "inputs": {}
+  },
+  "13": {
+    "class_type": "PulidInsightFaceLoader",
+    "inputs": {
+      "provider": "CUDA"
+    }
+  },
+  "14": {
+    "class_type": "ApplyPulidAdvanced",
+    "inputs": {
+      "model": [
+        "3",
+        0
+      ],
+      "pulid": [
+        "11",
+        0
+      ],
+      "eva_clip": [
+        "12",
+        0
+      ],
+      "face_analysis": [
+        "13",
+        0
+      ],
+      "image": [
+        "1",
+        0
+      ],
+      "weight": 0.85,
+      "projection": "ortho_v2",
+      "fidelity": 8,
+      "noise": 0.0,
+      "start_at": 0.0,
+      "end_at": 1.0,
+      "attn_mask": [
+        "7",
+        0
+      ]
+    }
+  },
+  "15": {
+    "class_type": "IPAdapterUnifiedLoader",
+    "inputs": {
+      "model": [
+        "14",
+        0
+      ],
+      "preset": "STANDARD (medium strength)"
+    }
+  },
+  "16": {
+    "class_type": "IPAdapterAdvanced",
+    "inputs": {
+      "model": [
+        "15",
+        0
+      ],
+      "ipadapter": [
+        "15",
+        1
+      ],
+      "image": [
+        "1",
+        0
+      ],
+      "weight": 0.55,
+      "weight_type": "linear",
+      "combine_embeds": "concat",
+      "start_at": 0.0,
+      "end_at": 0.7,
+      "embeds_scaling": "K+V",
+      "attn_mask": [
+        "7",
+        0
+      ]
+    }
+  },
+  "17": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "16",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "10",
+        0
+      ],
+      "seed": 84739281,
+      "steps": 30,
+      "cfg": 6.5,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "karras",
+      "denoise": 0.9
+    }
+  },
+  "18": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "17",
+        0
+      ],
+      "vae": [
+        "3",
+        2
+      ]
+    }
+  },
+  "19": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "18",
+        0
+      ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/generated_head"
+    }
+  },
+  "20": {
+    "class_type": "ReActorFaceSwap",
+    "inputs": {
+      "enabled": true,
+      "input_image": [
+        "18",
+        0
+      ],
+      "source_image": [
+        "1",
+        0
+      ],
+      "swap_model": "inswapper_128.onnx",
+      "facedetection": "retinaface_resnet50",
+      "face_restore_model": "none",
+      "face_restore_visibility": 1.0,
+      "codeformer_weight": 0.5,
+      "detect_gender_input": "no",
+      "detect_gender_source": "no",
+      "input_faces_index": "0",
+      "source_faces_index": "0",
+      "console_log_level": 1
+    }
+  },
+  "21": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "20",
+        0
+      ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/reactor_bake"
+    }
+  },
+  "22": {
+    "class_type": "FaceAnalysisModels",
+    "inputs": {
+      "library": "insightface",
+      "provider": "CUDA"
+    }
+  },
+  "23": {
+    "class_type": "FaceSegmentation",
+    "inputs": {
+      "analysis_models": [
+        "22",
+        0
+      ],
+      "image": [
+        "20",
+        0
+      ],
+      "area": "face",
+      "grow": 12,
+      "grow_tapered": true,
+      "blur": 10
+    }
+  },
+  "24": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "23",
+        0
+      ]
+    }
+  },
+  "25": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "24",
+        0
+      ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/inner_face_mask"
+    }
+  },
+  "26": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "20",
+        0
+      ],
+      "vae": [
+        "3",
+        2
+      ]
+    }
+  },
+  "27": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "3",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "26",
+        0
+      ],
+      "seed": 91827364,
+      "steps": 25,
+      "cfg": 5.0,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "karras",
+      "denoise": 0.2
+    }
+  },
+  "28": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "27",
+        0
+      ],
+      "vae": [
+        "3",
+        2
+      ]
+    }
+  },
+  "29": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": [
+        "20",
+        0
+      ],
+      "source": [
+        "28",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "mask": [
+        "23",
+        0
+      ]
+    }
+  },
+  "30": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "29",
+        0
+      ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/final"
+    }
+  }
+}

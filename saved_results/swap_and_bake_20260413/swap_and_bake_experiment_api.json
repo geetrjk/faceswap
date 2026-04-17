@@ -1,0 +1,180 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "subject_5 year curly.webp"
+    }
+  },
+  "2": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "superman.png"
+    }
+  },
+  "3": {
+    "class_type": "ReActorFaceSwap",
+    "inputs": {
+      "enabled": true,
+      "input_image": [
+        "2",
+        0
+      ],
+      "source_image": [
+        "1",
+        0
+      ],
+      "facedetection": "retinaface_resnet50",
+      "face_restore_model": "none",
+      "face_restore_visibility": 1.0,
+      "codeformer_weight": 0.5,
+      "swap_model": "inswapper_128.onnx",
+      "detect_gender_input": "no",
+      "detect_gender_source": "no",
+      "input_faces_index": "0",
+      "source_faces_index": "0",
+      "console_log_level": 1
+    }
+  },
+  "13": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "3",
+        0
+      ],
+      "filename_prefix": "faceswap/swap_and_bake/intermediate/reactor_swap"
+    }
+  },
+  "4": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "sd_xl_base_1.0_inpainting_0.1.safetensors"
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "4",
+        1
+      ],
+      "text": "comic book illustration, high quality, cinematic lighting, perfectly blended face, coherent shadows, cohesive art style"
+    }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "4",
+        1
+      ],
+      "text": "realistic photograph, visible seam, mismatched skin tone, distorted face, abstract artifacts, green glitch, latent noise, poorly drawn"
+    }
+  },
+  "7": {
+    "class_type": "FaceAnalysisModels",
+    "inputs": {
+      "library": "insightface",
+      "provider": "CUDA"
+    }
+  },
+  "8": {
+    "class_type": "FaceSegmentation",
+    "inputs": {
+      "analysis_models": [
+        "7",
+        0
+      ],
+      "image": [
+        "3",
+        0
+      ],
+      "area": "face",
+      "grow": 24,
+      "grow_tapered": true,
+      "blur": 15
+    }
+  },
+  "14": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "8",
+        0
+      ]
+    }
+  },
+  "15": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "14",
+        0
+      ],
+      "filename_prefix": "faceswap/swap_and_bake/intermediate/bake_mask"
+    }
+  },
+  "9": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "3",
+        0
+      ],
+      "vae": [
+        "4",
+        2
+      ]
+    }
+  },
+  "10": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "4",
+        0
+      ],
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "6",
+        0
+      ],
+      "latent_image": [
+        "9",
+        0
+      ],
+      "seed": 123456789,
+      "steps": 30,
+      "cfg": 6.0,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "karras",
+      "denoise": 0.2
+    }
+  },
+  "11": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "10",
+        0
+      ],
+      "vae": [
+        "4",
+        2
+      ]
+    }
+  },
+  "12": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "11",
+        0
+      ],
+      "filename_prefix": "faceswap/swap_and_bake/final"
+    }
+  }
+}

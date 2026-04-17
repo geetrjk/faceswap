@@ -1,0 +1,546 @@
+{
+  "id": "faceswap-subject-on-character-ui",
+  "revision": 0,
+  "last_node_id": 13,
+  "last_link_id": 13,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [
+        80,
+        160
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "subject_5 year curly.webp",
+        "image"
+      ],
+      "title": "Load Subject Identity"
+    },
+    {
+      "id": 2,
+      "type": "LoadImage",
+      "pos": [
+        80,
+        520
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            5,
+            6,
+            7,
+            8
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "superman.png",
+        "image"
+      ],
+      "title": "Load Target Character"
+    },
+    {
+      "id": 3,
+      "type": "PreviewImage",
+      "pos": [
+        450,
+        80
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [],
+      "title": "Preview Subject Input"
+    },
+    {
+      "id": 4,
+      "type": "SaveImage",
+      "pos": [
+        450,
+        220
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 2
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "faceswap/intermediate/subject_input"
+      ],
+      "title": "Save Subject Input"
+    },
+    {
+      "id": 5,
+      "type": "PreviewImage",
+      "pos": [
+        450,
+        460
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 5
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [],
+      "title": "Preview Target Input"
+    },
+    {
+      "id": 6,
+      "type": "SaveImage",
+      "pos": [
+        450,
+        600
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 6
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "faceswap/intermediate/target_input"
+      ],
+      "title": "Save Target Input"
+    },
+    {
+      "id": 7,
+      "type": "ReActorFaceSwap",
+      "pos": [
+        820,
+        420
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input_image",
+          "type": "IMAGE",
+          "link": 7
+        },
+        {
+          "name": "source_image",
+          "type": "IMAGE",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SWAPPED_IMAGE",
+          "type": "IMAGE",
+          "links": [
+            9,
+            10
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        true,
+        "inswapper_128.onnx",
+        "retinaface_resnet50",
+        "none",
+        1.0,
+        0.5,
+        "no",
+        "no",
+        "0",
+        "0",
+        1
+      ],
+      "title": "Plain Swap Diagnostic"
+    },
+    {
+      "id": 8,
+      "type": "PreviewImage",
+      "pos": [
+        1180,
+        360
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [],
+      "title": "Preview Plain Swap"
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "pos": [
+        1180,
+        500
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 10
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "faceswap/intermediate/plain_swap"
+      ],
+      "title": "Save Plain Swap"
+    },
+    {
+      "id": 10,
+      "type": "ReActorFaceSwap",
+      "pos": [
+        820,
+        780
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input_image",
+          "type": "IMAGE",
+          "link": 8
+        },
+        {
+          "name": "source_image",
+          "type": "IMAGE",
+          "link": 4
+        },
+        {
+          "name": "face_boost",
+          "type": "FACE_BOOST",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SWAPPED_IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11,
+            12
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        true,
+        "inswapper_128.onnx",
+        "retinaface_resnet50",
+        "GFPGANv1.4.pth",
+        1.0,
+        0.5,
+        "no",
+        "no",
+        "0",
+        "0",
+        1
+      ],
+      "title": "Boosted Final Swap"
+    },
+    {
+      "id": 11,
+      "type": "PreviewImage",
+      "pos": [
+        1180,
+        740
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 11
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [],
+      "title": "Preview Final"
+    },
+    {
+      "id": 12,
+      "type": "SaveImage",
+      "pos": [
+        1180,
+        880
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 12
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "faceswap/final"
+      ],
+      "title": "Save Final"
+    },
+    {
+      "id": 13,
+      "type": "ReActorFaceBoost",
+      "pos": [
+        450,
+        800
+      ],
+      "size": [
+        315,
+        120
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "FACE_BOOST",
+          "type": "FACE_BOOST",
+          "links": [
+            13
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        true,
+        "GFPGANv1.4.pth",
+        "Bicubic",
+        1.0,
+        0.5,
+        false
+      ],
+      "title": "FaceBoost Settings"
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      3,
+      0,
+      "IMAGE"
+    ],
+    [
+      2,
+      1,
+      0,
+      4,
+      0,
+      "IMAGE"
+    ],
+    [
+      3,
+      1,
+      0,
+      7,
+      1,
+      "IMAGE"
+    ],
+    [
+      4,
+      1,
+      0,
+      10,
+      1,
+      "IMAGE"
+    ],
+    [
+      5,
+      2,
+      0,
+      5,
+      0,
+      "IMAGE"
+    ],
+    [
+      6,
+      2,
+      0,
+      6,
+      0,
+      "IMAGE"
+    ],
+    [
+      7,
+      2,
+      0,
+      7,
+      0,
+      "IMAGE"
+    ],
+    [
+      8,
+      2,
+      0,
+      10,
+      0,
+      "IMAGE"
+    ],
+    [
+      9,
+      7,
+      0,
+      8,
+      0,
+      "IMAGE"
+    ],
+    [
+      10,
+      7,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      11,
+      10,
+      0,
+      11,
+      0,
+      "IMAGE"
+    ],
+    [
+      12,
+      10,
+      0,
+      12,
+      0,
+      "IMAGE"
+    ],
+    [
+      13,
+      13,
+      0,
+      10,
+      2,
+      "FACE_BOOST"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

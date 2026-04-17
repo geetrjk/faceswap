@@ -1,0 +1,789 @@
+{
+  "id": "swap-and-bake-experiment-ui",
+  "revision": 0,
+  "last_node_id": 16,
+  "last_link_id": 20,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [
+        80,
+        120
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "subject_5 year curly.webp",
+        "image"
+      ],
+      "title": "Load Subject Identity"
+    },
+    {
+      "id": 2,
+      "type": "LoadImage",
+      "pos": [
+        80,
+        420
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "superman.png",
+        "image"
+      ],
+      "title": "Load Target Template"
+    },
+    {
+      "id": 3,
+      "type": "ReActorFaceSwap",
+      "pos": [
+        450,
+        320
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input_image",
+          "type": "IMAGE",
+          "link": 2
+        },
+        {
+          "name": "source_image",
+          "type": "IMAGE",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SWAPPED_IMAGE",
+          "type": "IMAGE",
+          "links": [
+            3,
+            7,
+            10
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        true,
+        "inswapper_128.onnx",
+        "retinaface_resnet50",
+        "none",
+        1.0,
+        0.5,
+        "no",
+        "no",
+        "0",
+        "0",
+        1
+      ],
+      "title": "ReActor Identity Swap"
+    },
+    {
+      "id": 13,
+      "type": "SaveImage",
+      "pos": [
+        820,
+        220
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 3
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "faceswap/swap_and_bake/intermediate/reactor_swap"
+      ],
+      "title": "Save ReActor Swap"
+    },
+    {
+      "id": 4,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        80,
+        760
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            13
+          ]
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            4,
+            5
+          ]
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            11,
+            18
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "sd_xl_base_1.0_inpainting_0.1.safetensors"
+      ],
+      "title": "Load Inpaint Checkpoint"
+    },
+    {
+      "id": 5,
+      "type": "CLIPTextEncode",
+      "pos": [
+        450,
+        700
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            14
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "comic book illustration, high quality, cinematic lighting, perfectly blended face, coherent shadows, cohesive art style"
+      ],
+      "title": "Positive Bake Prompt"
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [
+        450,
+        900
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            15
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "realistic photograph, visible seam, mismatched skin tone, distorted face, abstract artifacts, green glitch, latent noise, poorly drawn"
+      ],
+      "title": "Negative Bake Prompt"
+    },
+    {
+      "id": 7,
+      "type": "FaceAnalysisModels",
+      "pos": [
+        820,
+        520
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "ANALYSIS_MODELS",
+          "type": "ANALYSIS_MODELS",
+          "links": [
+            6
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "insightface",
+        "CUDA"
+      ],
+      "title": "Load Face Analysis"
+    },
+    {
+      "id": 8,
+      "type": "FaceSegmentation",
+      "pos": [
+        1180,
+        420
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "analysis_models",
+          "type": "ANALYSIS_MODELS",
+          "link": 6
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": [
+            8
+          ]
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": []
+        },
+        {
+          "name": "seg_mask",
+          "type": "MASK",
+          "links": []
+        },
+        {
+          "name": "seg_image",
+          "type": "IMAGE",
+          "links": []
+        },
+        {
+          "name": "x",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "y",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": []
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "face",
+        24,
+        true,
+        15
+      ],
+      "title": "Find Swapped Face Mask"
+    },
+    {
+      "id": 14,
+      "type": "MaskToImage",
+      "pos": [
+        1540,
+        420
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            9
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [],
+      "title": "Convert Bake Mask"
+    },
+    {
+      "id": 15,
+      "type": "SaveImage",
+      "pos": [
+        1900,
+        420
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "faceswap/swap_and_bake/intermediate/bake_mask"
+      ],
+      "title": "Save Bake Mask"
+    },
+    {
+      "id": 9,
+      "type": "VAEEncode",
+      "pos": [
+        1180,
+        700
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 10
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            16
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [],
+      "title": "Encode Swap For Low-Denoise Bake"
+    },
+    {
+      "id": 10,
+      "type": "KSampler",
+      "pos": [
+        1540,
+        700
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 13
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 14
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 15
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 16
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            17
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        123456789,
+        "fixed",
+        30,
+        6.0,
+        "dpmpp_2m_sde",
+        "karras",
+        0.2
+      ],
+      "title": "Bake Swap"
+    },
+    {
+      "id": 11,
+      "type": "VAEDecode",
+      "pos": [
+        1900,
+        700
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 17
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 18
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            19,
+            20
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [],
+      "title": "Decode Baked Swap"
+    },
+    {
+      "id": 12,
+      "type": "SaveImage",
+      "pos": [
+        2260,
+        620
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 19
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "faceswap/swap_and_bake/final"
+      ],
+      "title": "Save Final Baked Swap"
+    },
+    {
+      "id": 16,
+      "type": "PreviewImage",
+      "pos": [
+        2260,
+        780
+      ],
+      "size": [
+        330,
+        120
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 20
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [],
+      "title": "Preview Final Baked Swap"
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      3,
+      1,
+      "IMAGE"
+    ],
+    [
+      2,
+      2,
+      0,
+      3,
+      0,
+      "IMAGE"
+    ],
+    [
+      3,
+      3,
+      0,
+      13,
+      0,
+      "IMAGE"
+    ],
+    [
+      4,
+      4,
+      1,
+      5,
+      0,
+      "CLIP"
+    ],
+    [
+      5,
+      4,
+      1,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      6,
+      7,
+      0,
+      8,
+      0,
+      "ANALYSIS_MODELS"
+    ],
+    [
+      7,
+      3,
+      0,
+      8,
+      1,
+      "IMAGE"
+    ],
+    [
+      8,
+      8,
+      0,
+      14,
+      0,
+      "MASK"
+    ],
+    [
+      9,
+      14,
+      0,
+      15,
+      0,
+      "IMAGE"
+    ],
+    [
+      10,
+      3,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      11,
+      4,
+      2,
+      9,
+      1,
+      "VAE"
+    ],
+    [
+      13,
+      4,
+      0,
+      10,
+      0,
+      "MODEL"
+    ],
+    [
+      14,
+      5,
+      0,
+      10,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      15,
+      6,
+      0,
+      10,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      16,
+      9,
+      0,
+      10,
+      3,
+      "LATENT"
+    ],
+    [
+      17,
+      10,
+      0,
+      11,
+      0,
+      "LATENT"
+    ],
+    [
+      18,
+      4,
+      2,
+      11,
+      1,
+      "VAE"
+    ],
+    [
+      19,
+      11,
+      0,
+      12,
+      0,
+      "IMAGE"
+    ],
+    [
+      20,
+      11,
+      0,
+      16,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}

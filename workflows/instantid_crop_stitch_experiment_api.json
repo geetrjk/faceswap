@@ -1,0 +1,494 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "subject_5 year curly.webp"
+    }
+  },
+  "2": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "superman.png"
+    }
+  },
+  "3": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "1",
+        0
+      ],
+      "filename_prefix": "faceswap/instantid_crop_stitch/intermediate/subject_identity"
+    }
+  },
+  "4": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "2",
+        0
+      ],
+      "filename_prefix": "faceswap/instantid_crop_stitch/intermediate/target_full"
+    }
+  },
+  "5": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "sd_xl_base_1.0_inpainting_0.1.safetensors"
+    }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "5",
+        1
+      ],
+      "text": "local head and face crop of the same target character, replace the face with a young child with curly hair, preserve head angle, crop framing, surrounding hair silhouette, neck transition, comic book illustration style"
+    }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "5",
+        1
+      ],
+      "text": "changed body, changed costume, changed cape, changed pose, changed background, full body transformation, adult face, older person, square jaw, straight hair, target face identity, superman face, beard, mustache, hard mask edge, visible seam, distorted face, blank face, gray face, missing eyes, missing mouth, faceless, mask plate, flat color, watermark, text"
+    }
+  },
+  "8": {
+    "class_type": "InstantIDModelLoader",
+    "inputs": {
+      "instantid_file": "ip-adapter.bin"
+    }
+  },
+  "9": {
+    "class_type": "InstantIDFaceAnalysis",
+    "inputs": {
+      "provider": "CUDA"
+    }
+  },
+  "10": {
+    "class_type": "ControlNetLoader",
+    "inputs": {
+      "control_net_name": "instantid_controlnet.safetensors"
+    }
+  },
+  "11": {
+    "class_type": "FaceAnalysisModels",
+    "inputs": {
+      "library": "insightface",
+      "provider": "CUDA"
+    }
+  },
+  "36": {
+    "class_type": "Canny",
+    "inputs": {
+      "image": [
+        "16",
+        0
+      ],
+      "low_threshold": 0.2,
+      "high_threshold": 0.6
+    }
+  },
+  "37": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "36",
+        0
+      ],
+      "filename_prefix": "faceswap/instantid_crop_stitch/intermediate/target_crop_canny"
+    }
+  },
+  "38": {
+    "class_type": "ControlNetLoader",
+    "inputs": {
+      "control_net_name": "controlnet-canny-sdxl-1.0-small.safetensors"
+    }
+  },
+  "13": {
+    "class_type": "FaceSegmentation",
+    "inputs": {
+      "analysis_models": [
+        "11",
+        0
+      ],
+      "image": [
+        "2",
+        0
+      ],
+      "area": "face+forehead (if available)",
+      "grow": 72,
+      "grow_tapered": true,
+      "blur": 31
+    }
+  },
+  "14": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "13",
+        0
+      ]
+    }
+  },
+  "15": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "14",
+        0
+      ],
+      "filename_prefix": "faceswap/instantid_crop_stitch/intermediate/target_full_mask"
+    }
+  },
+  "16": {
+    "class_type": "ImageCrop",
+    "inputs": {
+      "image": [
+        "2",
+        0
+      ],
+      "width": [
+        "13",
+        6
+      ],
+      "height": [
+        "13",
+        7
+      ],
+      "x": [
+        "13",
+        4
+      ],
+      "y": [
+        "13",
+        5
+      ]
+    }
+  },
+  "17": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "16",
+        0
+      ],
+      "filename_prefix": "faceswap/instantid_crop_stitch/intermediate/target_crop"
+    }
+  },
+  "18": {
+    "class_type": "CropMask",
+    "inputs": {
+      "mask": [
+        "13",
+        0
+      ],
+      "x": [
+        "13",
+        4
+      ],
+      "y": [
+        "13",
+        5
+      ],
+      "width": [
+        "13",
+        6
+      ],
+      "height": [
+        "13",
+        7
+      ]
+    }
+  },
+  "19": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "18",
+        0
+      ]
+    }
+  },
+  "20": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "19",
+        0
+      ],
+      "filename_prefix": "faceswap/instantid_crop_stitch/intermediate/target_crop_region_mask"
+    }
+  },
+  "21": {
+    "class_type": "FaceKeypointsPreprocessor",
+    "inputs": {
+      "faceanalysis": [
+        "9",
+        0
+      ],
+      "image": [
+        "16",
+        0
+      ]
+    }
+  },
+  "22": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "21",
+        0
+      ],
+      "filename_prefix": "faceswap/instantid_crop_stitch/intermediate/target_crop_keypoints"
+    }
+  },
+  "33": {
+    "class_type": "GrowMask",
+    "inputs": {
+      "mask": [
+        "18",
+        0
+      ],
+      "expand": -56,
+      "tapered_corners": true
+    }
+  },
+  "34": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "33",
+        0
+      ]
+    }
+  },
+  "35": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "34",
+        0
+      ],
+      "filename_prefix": "faceswap/instantid_crop_stitch/intermediate/target_crop_edit_mask"
+    }
+  },
+  "23": {
+    "class_type": "ApplyInstantIDAdvanced",
+    "inputs": {
+      "instantid": [
+        "8",
+        0
+      ],
+      "insightface": [
+        "9",
+        0
+      ],
+      "control_net": [
+        "10",
+        0
+      ],
+      "image": [
+        "1",
+        0
+      ],
+      "model": [
+        "5",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "ip_weight": 1.35,
+      "cn_strength": 0.35,
+      "start_at": 0.0,
+      "end_at": 0.82,
+      "noise": 0.25,
+      "combine_embeds": "average",
+      "image_kps": [
+        "21",
+        0
+      ],
+      "mask": [
+        "33",
+        0
+      ]
+    }
+  },
+  "39": {
+    "class_type": "ControlNetApplyAdvanced",
+    "inputs": {
+      "positive": [
+        "23",
+        1
+      ],
+      "negative": [
+        "23",
+        2
+      ],
+      "control_net": [
+        "38",
+        0
+      ],
+      "image": [
+        "36",
+        0
+      ],
+      "strength": 0.45,
+      "start_percent": 0.0,
+      "end_percent": 0.7
+    }
+  },
+  "24": {
+    "class_type": "VAEEncodeForInpaint",
+    "inputs": {
+      "pixels": [
+        "16",
+        0
+      ],
+      "vae": [
+        "5",
+        2
+      ],
+      "mask": [
+        "33",
+        0
+      ],
+      "grow_mask_by": 12
+    }
+  },
+  "25": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "23",
+        0
+      ],
+      "positive": [
+        "39",
+        0
+      ],
+      "negative": [
+        "39",
+        1
+      ],
+      "latent_image": [
+        "24",
+        0
+      ],
+      "seed": 470391928,
+      "steps": 34,
+      "cfg": 5.2,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "karras",
+      "denoise": 0.65
+    }
+  },
+  "26": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "25",
+        0
+      ],
+      "vae": [
+        "5",
+        2
+      ]
+    }
+  },
+  "27": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "26",
+        0
+      ],
+      "filename_prefix": "faceswap/instantid_crop_stitch/intermediate/crop_inpaint_raw"
+    }
+  },
+  "28": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": [
+        "16",
+        0
+      ],
+      "source": [
+        "26",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "mask": [
+        "33",
+        0
+      ]
+    }
+  },
+  "29": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "28",
+        0
+      ],
+      "filename_prefix": "faceswap/instantid_crop_stitch/intermediate/crop_composite"
+    }
+  },
+  "30": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "destination": [
+        "2",
+        0
+      ],
+      "source": [
+        "28",
+        0
+      ],
+      "x": [
+        "13",
+        4
+      ],
+      "y": [
+        "13",
+        5
+      ],
+      "resize_source": false,
+      "mask": [
+        "33",
+        0
+      ]
+    }
+  },
+  "31": {
+    "class_type": "PreviewImage",
+    "inputs": {
+      "images": [
+        "30",
+        0
+      ]
+    }
+  },
+  "32": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "30",
+        0
+      ],
+      "filename_prefix": "faceswap/instantid_crop_stitch/final"
+    }
+  }
+}
