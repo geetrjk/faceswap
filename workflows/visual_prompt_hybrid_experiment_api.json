@@ -24,7 +24,7 @@
         "3",
         1
       ],
-      "text": "comic book illustration, cinematic superhero portrait, perfectly blended face, cohesive lighting, preserve the source child identity, preserve the source facial expression, preserve the source hairstyle, masterpiece"
+      "text": "comic book illustration, cinematic lighting, crisp linework, bold color separation, high facial detail, sharp eyes, clean shading, masterpiece"
     }
   },
   "5": {
@@ -34,7 +34,7 @@
         "3",
         1
       ],
-      "text": "realistic photograph, abstract artifacts, poorly drawn, mismatched anatomy, green glitch, latent noise, visible seam, blank face, gray face plate, duplicate features, deformed eyes, distorted mouth"
+      "text": "realistic photograph, abstract artifacts, muddy details, soft focus, blurred eyes, washed out skin texture, visible seam, blank face, gray face plate, duplicate features, deformed eyes, distorted mouth"
     }
   },
   "6": {
@@ -249,7 +249,7 @@
       ],
       "swap_model": "inswapper_128.onnx",
       "facedetection": "retinaface_resnet50",
-      "face_restore_model": "none",
+      "face_restore_model": "GFPGANv1.4.pth",
       "face_restore_visibility": 1.0,
       "codeformer_weight": 0.5,
       "detect_gender_input": "no",
@@ -288,9 +288,9 @@
         0
       ],
       "area": "face",
-      "grow": 12,
+      "grow": 6,
       "grow_tapered": true,
-      "blur": 10
+      "blur": 6
     }
   },
   "24": {
@@ -312,6 +312,32 @@
       "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/inner_face_mask"
     }
   },
+  "43": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "sd_xl_base_1.0.safetensors"
+    }
+  },
+  "44": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "43",
+        1
+      ],
+      "text": "comic book illustration, cinematic lighting, crisp linework, bold color separation, high facial detail, sharp eyes, clean shading, masterpiece"
+    }
+  },
+  "45": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "43",
+        1
+      ],
+      "text": "realistic photograph, abstract artifacts, muddy details, soft focus, blurred eyes, washed out skin texture, visible seam, blank face, gray face plate, duplicate features, deformed eyes, distorted mouth"
+    }
+  },
   "26": {
     "class_type": "VAEEncode",
     "inputs": {
@@ -320,7 +346,7 @@
         0
       ],
       "vae": [
-        "3",
+        "43",
         2
       ]
     }
@@ -329,15 +355,15 @@
     "class_type": "KSampler",
     "inputs": {
       "model": [
-        "3",
+        "43",
         0
       ],
       "positive": [
-        "4",
+        "44",
         0
       ],
       "negative": [
-        "5",
+        "45",
         0
       ],
       "latent_image": [
@@ -345,11 +371,11 @@
         0
       ],
       "seed": 91827364,
-      "steps": 25,
-      "cfg": 5.0,
+      "steps": 12,
+      "cfg": 4.0,
       "sampler_name": "dpmpp_2m_sde",
       "scheduler": "karras",
-      "denoise": 0.2
+      "denoise": 0.16
     }
   },
   "28": {
@@ -360,9 +386,19 @@
         0
       ],
       "vae": [
-        "3",
+        "43",
         2
       ]
+    }
+  },
+  "46": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "28",
+        0
+      ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/inner_face_sdedit"
     }
   },
   "29": {
@@ -445,6 +481,114 @@
         0
       ],
       "filename_prefix": "faceswap/visual_prompt_hybrid/final"
+    }
+  },
+  "36": {
+    "class_type": "ImageScaleBy",
+    "inputs": {
+      "image": [
+        "29",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "scale_by": 1.5
+    }
+  },
+  "37": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "36",
+        0
+      ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/intermediate/hires_upscaled_base"
+    }
+  },
+  "38": {
+    "class_type": "VAEEncode",
+    "inputs": {
+      "pixels": [
+        "36",
+        0
+      ],
+      "vae": [
+        "43",
+        2
+      ]
+    }
+  },
+  "39": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "43",
+        0
+      ],
+      "positive": [
+        "44",
+        0
+      ],
+      "negative": [
+        "45",
+        0
+      ],
+      "latent_image": [
+        "38",
+        0
+      ],
+      "seed": 27182818,
+      "steps": 16,
+      "cfg": 4.5,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "karras",
+      "denoise": 0.16
+    }
+  },
+  "40": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "39",
+        0
+      ],
+      "vae": [
+        "43",
+        2
+      ]
+    }
+  },
+  "41": {
+    "class_type": "ReActorFaceSwap",
+    "inputs": {
+      "enabled": true,
+      "input_image": [
+        "40",
+        0
+      ],
+      "source_image": [
+        "1",
+        0
+      ],
+      "swap_model": "inswapper_128.onnx",
+      "facedetection": "retinaface_resnet50",
+      "face_restore_model": "GFPGANv1.4.pth",
+      "face_restore_visibility": 1.0,
+      "codeformer_weight": 0.5,
+      "detect_gender_input": "no",
+      "detect_gender_source": "no",
+      "input_faces_index": "0",
+      "source_faces_index": "0",
+      "console_log_level": 1
+    }
+  },
+  "42": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "41",
+        0
+      ],
+      "filename_prefix": "faceswap/visual_prompt_hybrid/final_hires"
     }
   }
 }

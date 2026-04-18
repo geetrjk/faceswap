@@ -37,6 +37,11 @@ def parse_outputs(stdout: str) -> list[str]:
     return [line.split("=", 1)[1].strip() for line in stdout.splitlines() if line.startswith("OUTPUT=")]
 
 
+def parse_status(stdout: str) -> str | None:
+    statuses = [line.split("=", 1)[1].strip() for line in stdout.splitlines() if line.startswith("STATUS=")]
+    return statuses[-1] if statuses else None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--subjects-dir", default=str(TEST_SUBJECTS_DIR))
@@ -92,6 +97,8 @@ def main() -> None:
                 args.target_image,
                 "--filename-prefix",
                 f"{run_dir}/final",
+                "--hires-filename-prefix",
+                f"{run_dir}/final_hires",
                 "--intermediate-prefix",
                 f"{run_dir}/intermediate",
             ]
@@ -121,6 +128,10 @@ def main() -> None:
         face_mask = next(path for path in outputs if path.endswith("/intermediate/inner_face_mask_00001_.png"))
         harmonized_remote = f"{run_dir}/final_postprocess_00001_.png"
         refined_mask_remote = f"{run_dir}/intermediate/target_skin_mask_refined_00001_.png"
+        hires_image = next((path for path in outputs if "/final_hires_" in path), None)
+        hires_harmonized_remote = f"{run_dir}/final_hires_postprocess_00001_.png" if hires_image else None
+        hires_refined_mask_remote = f"{run_dir}/intermediate/target_skin_mask_refined_hires_00001_.png" if hires_image else None
+        hires_sharp_remote = f"{run_dir}/final_hires_sharp_00001_.png" if hires_image else None
         post = run(
             [
                 sys.executable,
@@ -143,6 +154,51 @@ def main() -> None:
         if post.stderr:
             print(post.stderr, file=sys.stderr, end="")
         outputs.extend([harmonized_remote, refined_mask_remote])
+        post_status = parse_status(post.stdout)
+        if hires_image and hires_harmonized_remote and hires_refined_mask_remote and post_status == "ok":
+            hires_post = run(
+                [
+                    sys.executable,
+                    str(SIMPLEPOD_SCRIPT),
+                    "postprocess-skin-tone",
+                    "--image",
+                    hires_image,
+                    "--candidate-mask",
+                    candidate_mask,
+                    "--face-mask",
+                    face_mask,
+                    "--output",
+                    hires_harmonized_remote,
+                    "--refined-mask-output",
+                    hires_refined_mask_remote,
+                ],
+                capture_output=True,
+            )
+            print(hires_post.stdout, end="")
+            if hires_post.stderr:
+                print(hires_post.stderr, file=sys.stderr, end="")
+            outputs.extend([hires_harmonized_remote, hires_refined_mask_remote])
+
+        hires_sharp_source = hires_harmonized_remote if hires_harmonized_remote in outputs else hires_image
+        if hires_sharp_source and hires_sharp_remote:
+            hires_sharp = run(
+                [
+                    sys.executable,
+                    str(SIMPLEPOD_SCRIPT),
+                    "postprocess-hires-sharp",
+                    "--image",
+                    hires_sharp_source,
+                    "--face-mask",
+                    face_mask,
+                    "--output",
+                    hires_sharp_remote,
+                ],
+                capture_output=True,
+            )
+            print(hires_sharp.stdout, end="")
+            if hires_sharp.stderr:
+                print(hires_sharp.stderr, file=sys.stderr, end="")
+            outputs.append(hires_sharp_remote)
 
         subject_dir = local_dir / slug
         subject_dir.mkdir(parents=True, exist_ok=True)

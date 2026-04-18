@@ -1,8 +1,8 @@
 {
   "id": "visual-prompt-hybrid-experiment-ui",
   "revision": 0,
-  "last_node_id": 35,
-  "last_link_id": 51,
+  "last_node_id": 46,
+  "last_link_id": 67,
   "nodes": [
     {
       "id": 1,
@@ -89,8 +89,7 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            13,
-            38
+            13
           ]
         },
         {
@@ -106,9 +105,7 @@
           "type": "VAE",
           "links": [
             8,
-            26,
-            36,
-            43
+            26
           ]
         }
       ],
@@ -144,16 +141,15 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            22,
-            39
+            22
           ]
         }
       ],
       "properties": {},
       "widgets_values": [
-        "comic book illustration, cinematic superhero portrait, perfectly blended face, cohesive lighting, preserve the source child identity, preserve the source facial expression, preserve the source hairstyle, masterpiece"
+        "comic book illustration, cinematic lighting, crisp linework, bold color separation, high facial detail, sharp eyes, clean shading, masterpiece"
       ],
-      "title": "Positive Prompt"
+      "title": "Primary Style Prompt"
     },
     {
       "id": 5,
@@ -181,16 +177,15 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            23,
-            40
+            23
           ]
         }
       ],
       "properties": {},
       "widgets_values": [
-        "realistic photograph, abstract artifacts, poorly drawn, mismatched anatomy, green glitch, latent noise, visible seam, blank face, gray face plate, duplicate features, deformed eyes, distorted mouth"
+        "realistic photograph, abstract artifacts, muddy details, soft focus, blurred eyes, washed out skin texture, visible seam, blank face, gray face plate, duplicate features, deformed eyes, distorted mouth"
       ],
-      "title": "Negative Prompt"
+      "title": "Primary Negative Prompt"
     },
     {
       "id": 6,
@@ -813,7 +808,7 @@
         true,
         "inswapper_128.onnx",
         "retinaface_resnet50",
-        "none",
+        "GFPGANv1.4.pth",
         1.0,
         0.5,
         "no",
@@ -822,7 +817,7 @@
         "0",
         1
       ],
-      "title": "ReActor Likeness Bake"
+      "title": "ReActor Restore Weld"
     },
     {
       "id": 21,
@@ -957,9 +952,9 @@
       "properties": {},
       "widgets_values": [
         "face",
-        12,
+        6,
         true,
-        10
+        6
       ],
       "title": "Inner Face Blend Mask"
     },
@@ -1062,7 +1057,7 @@
       ],
       "properties": {},
       "widgets_values": [],
-      "title": "Encode ReActor Output For Bake"
+      "title": "Encode ReActor Output For Inner-Face SDEdit"
     },
     {
       "id": 27,
@@ -1113,13 +1108,13 @@
       "widgets_values": [
         91827364,
         "fixed",
-        25,
-        5.0,
+        12,
+        4.0,
         "dpmpp_2m_sde",
         "karras",
-        0.2
+        0.16
       ],
-      "title": "Low-Denoise Seam Bake"
+      "title": "Precision Inner-Face SDEdit"
     },
     {
       "id": 28,
@@ -1152,13 +1147,14 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            44
+            44,
+            65
           ]
         }
       ],
       "properties": {},
       "widgets_values": [],
-      "title": "Decode Seam Bake"
+      "title": "Decode Inner-Face SDEdit"
     },
     {
       "id": 29,
@@ -1197,7 +1193,8 @@
           "type": "IMAGE",
           "links": [
             46,
-            47
+            47,
+            52
           ]
         }
       ],
@@ -1207,7 +1204,7 @@
         0,
         false
       ],
-      "title": "Blend Inner Face Back"
+      "title": "Blend Inner-Face SDEdit"
     },
     {
       "id": 30,
@@ -1411,6 +1408,437 @@
         "faceswap/visual_prompt_hybrid/final"
       ],
       "title": "Save Final Result"
+    },
+    {
+      "id": 36,
+      "type": "ImageScaleBy",
+      "pos": [
+        6280,
+        1780
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 35,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 52
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            53,
+            54
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "lanczos",
+        1.5
+      ],
+      "title": "Upscale For Hi-Res Pass"
+    },
+    {
+      "id": 37,
+      "type": "SaveImage",
+      "pos": [
+        6680,
+        1720
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 36,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 53
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "faceswap/visual_prompt_hybrid/intermediate/hires_upscaled_base"
+      ],
+      "title": "Save Hi-Res Upscaled Base"
+    },
+    {
+      "id": 38,
+      "type": "VAEEncode",
+      "pos": [
+        6680,
+        1920
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 37,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 54
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 55
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            59
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [],
+      "title": "Encode Hi-Res Base"
+    },
+    {
+      "id": 39,
+      "type": "KSampler",
+      "pos": [
+        7080,
+        1920
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 38,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 56
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 57
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 58
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 59
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            60
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        27182818,
+        "fixed",
+        16,
+        4.5,
+        "dpmpp_2m_sde",
+        "karras",
+        0.16
+      ],
+      "title": "Hi-Res Precision Refine"
+    },
+    {
+      "id": 40,
+      "type": "VAEDecode",
+      "pos": [
+        7480,
+        1920
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 39,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 60
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 61
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            62
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [],
+      "title": "Decode Hi-Res Refine"
+    },
+    {
+      "id": 41,
+      "type": "ReActorFaceSwap",
+      "pos": [
+        7880,
+        1920
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 40,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input_image",
+          "type": "IMAGE",
+          "link": 62
+        },
+        {
+          "name": "source_image",
+          "type": "IMAGE",
+          "link": 63
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            64
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        true,
+        "inswapper_128.onnx",
+        "retinaface_resnet50",
+        "GFPGANv1.4.pth",
+        1.0,
+        0.5,
+        "no",
+        "no",
+        "0",
+        "0",
+        1
+      ],
+      "title": "ReActor Hi-Res Restore Weld"
+    },
+    {
+      "id": 42,
+      "type": "SaveImage",
+      "pos": [
+        8280,
+        1920
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 41,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 64
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "faceswap/visual_prompt_hybrid/final_hires"
+      ],
+      "title": "Save Hi-Res Result"
+    },
+    {
+      "id": 43,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        420,
+        1160
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 41,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            37,
+            56
+          ]
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            66,
+            67
+          ]
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            36,
+            42,
+            55,
+            61
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "sd_xl_base_1.0.safetensors"
+      ],
+      "title": "Load SDXL Detail Checkpoint"
+    },
+    {
+      "id": 44,
+      "type": "CLIPTextEncode",
+      "pos": [
+        820,
+        1100
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 42,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 66
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            38,
+            57
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "comic book illustration, cinematic lighting, crisp linework, bold color separation, high facial detail, sharp eyes, clean shading, masterpiece"
+      ],
+      "title": "Detail Style Prompt"
+    },
+    {
+      "id": 45,
+      "type": "CLIPTextEncode",
+      "pos": [
+        820,
+        1340
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 43,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 67
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            39,
+            58
+          ]
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "realistic photograph, abstract artifacts, muddy details, soft focus, blurred eyes, washed out skin texture, visible seam, blank face, gray face plate, duplicate features, deformed eyes, distorted mouth"
+      ],
+      "title": "Detail Negative Prompt"
+    },
+    {
+      "id": 46,
+      "type": "SaveImage",
+      "pos": [
+        5880,
+        1460
+      ],
+      "size": [
+        340,
+        120
+      ],
+      "flags": {},
+      "order": 44,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 65
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "faceswap/visual_prompt_hybrid/intermediate/inner_face_sdedit"
+      ],
+      "title": "Save Inner-Face SDEdit"
     }
   ],
   "links": [
@@ -1696,7 +2124,7 @@
     ],
     [
       36,
-      3,
+      43,
       2,
       26,
       1,
@@ -1704,7 +2132,7 @@
     ],
     [
       37,
-      3,
+      43,
       0,
       27,
       0,
@@ -1712,7 +2140,7 @@
     ],
     [
       38,
-      4,
+      44,
       0,
       27,
       1,
@@ -1720,7 +2148,7 @@
     ],
     [
       39,
-      5,
+      45,
       0,
       27,
       2,
@@ -1744,7 +2172,7 @@
     ],
     [
       42,
-      3,
+      43,
       2,
       28,
       1,
@@ -1821,12 +2249,140 @@
       35,
       0,
       "IMAGE"
+    ],
+    [
+      52,
+      29,
+      0,
+      36,
+      0,
+      "IMAGE"
+    ],
+    [
+      53,
+      36,
+      0,
+      37,
+      0,
+      "IMAGE"
+    ],
+    [
+      54,
+      36,
+      0,
+      38,
+      0,
+      "IMAGE"
+    ],
+    [
+      55,
+      43,
+      2,
+      38,
+      1,
+      "VAE"
+    ],
+    [
+      56,
+      43,
+      0,
+      39,
+      0,
+      "MODEL"
+    ],
+    [
+      57,
+      44,
+      0,
+      39,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      58,
+      45,
+      0,
+      39,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      59,
+      38,
+      0,
+      39,
+      3,
+      "LATENT"
+    ],
+    [
+      60,
+      39,
+      0,
+      40,
+      0,
+      "LATENT"
+    ],
+    [
+      61,
+      43,
+      2,
+      40,
+      1,
+      "VAE"
+    ],
+    [
+      62,
+      40,
+      0,
+      41,
+      0,
+      "IMAGE"
+    ],
+    [
+      63,
+      1,
+      0,
+      41,
+      1,
+      "IMAGE"
+    ],
+    [
+      64,
+      41,
+      0,
+      42,
+      0,
+      "IMAGE"
+    ],
+    [
+      65,
+      28,
+      0,
+      46,
+      0,
+      "IMAGE"
+    ],
+    [
+      66,
+      43,
+      1,
+      44,
+      0,
+      "CLIP"
+    ],
+    [
+      67,
+      43,
+      1,
+      45,
+      0,
+      "CLIP"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
-    "note": "Rebuilt visual prompt stack: semantic CLIPSeg head mask -> PuLID + structural IP-Adapter primary generation -> ReActor likeness bake -> low-denoise inner-face seam blend. Exposed skin harmonization is handled by the remote deterministic postprocess helper."
+    "note": "Rebuilt visual prompt stack: semantic CLIPSeg head mask -> PuLID + structural IP-Adapter primary generation -> ReActor restore weld -> precision inner-face SDEdit on a base SDXL checkpoint. Exposed skin harmonization is handled by the remote deterministic postprocess helper. A separate low-denoise hi-res branch upsamples the clean composite, refines on the base SDXL checkpoint, and reapplies ReActor for identity lock."
   },
   "version": 0.4
 }

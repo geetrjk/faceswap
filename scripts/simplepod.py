@@ -32,6 +32,7 @@ SWAP_AND_BAKE_UI_WORKFLOW = ROOT / "workflows" / "swap_and_bake_experiment_ui.js
 VISUAL_PROMPT_HYBRID_WORKFLOW = ROOT / "workflows" / "visual_prompt_hybrid_experiment_api.json"
 VISUAL_PROMPT_HYBRID_UI_WORKFLOW = ROOT / "workflows" / "visual_prompt_hybrid_experiment_ui.json"
 REMOTE_SKIN_TONE_POSTPROCESS = ROOT / "scripts" / "remote_skin_tone_postprocess.py"
+REMOTE_HIRES_SHARPEN = ROOT / "scripts" / "remote_hires_sharpen.py"
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 DEFAULT_INPUTS = [
     ROOT / "subject_5 year curly.webp",
@@ -1210,6 +1211,70 @@ def postprocess_skin_tone(_args) -> None:
             print(err, file=sys.stderr, end="")
 
 
+def postprocess_hires_sharp(_args) -> None:
+    script = REMOTE_HIRES_SHARPEN.read_text(encoding="utf-8")
+    with connect() as client:
+        comfy_root = find_comfy_root(client)
+
+        def resolve(remote_path: str) -> str:
+            if remote_path.startswith("/"):
+                return remote_path
+            return posixpath.join(comfy_root, "output", remote_path)
+
+        payload = json.dumps(
+            {
+                "image": resolve(_args.image),
+                "face_mask": resolve(_args.face_mask),
+                "output": resolve(_args.output),
+                "mask_threshold": _args.mask_threshold,
+                "global_radius": _args.global_radius,
+                "global_percent": _args.global_percent,
+                "global_threshold": _args.global_threshold,
+                "global_blend": _args.global_blend,
+                "face_radius": _args.face_radius,
+                "face_percent": _args.face_percent,
+                "face_threshold": _args.face_threshold,
+                "face_contrast": _args.face_contrast,
+                "face_grow": _args.face_grow,
+                "face_blur": _args.face_blur,
+                "face_blend": _args.face_blend,
+            }
+        )
+        remote_script = (
+            "import json, os, shlex, subprocess, sys, tempfile\n"
+            "payload = json.load(sys.stdin)\n"
+            f"script = {script!r}\n"
+            "with tempfile.NamedTemporaryFile('w', suffix='.py', delete=False) as handle:\n"
+            "    handle.write(script)\n"
+            "    path = handle.name\n"
+            "try:\n"
+            "    cmd = ['python3', path]\n"
+            "    for key in ['image', 'face_mask', 'output', 'mask_threshold', 'global_radius', 'global_percent', 'global_threshold', 'global_blend', 'face_radius', 'face_percent', 'face_threshold', 'face_contrast', 'face_grow', 'face_blur', 'face_blend']:\n"
+            "        cmd.extend([f'--{key.replace(\"_\", \"-\")}', str(payload[key])])\n"
+            "    proc = subprocess.run(cmd, text=True, capture_output=True)\n"
+            "    if proc.stdout:\n"
+            "        print(proc.stdout, end='')\n"
+            "    if proc.stderr:\n"
+            "        print(proc.stderr, file=sys.stderr, end='')\n"
+            "    raise SystemExit(proc.returncode)\n"
+            "finally:\n"
+            "    try:\n"
+            "        os.unlink(path)\n"
+            "    except FileNotFoundError:\n"
+            "        pass\n"
+        )
+        _, out, err = run_remote(
+            client,
+            f"python3 -c {shlex.quote(remote_script)}",
+            check=False,
+            stdin_data=payload,
+        )
+        if out:
+            print(out, end="")
+        if err:
+            print(err, file=sys.stderr, end="")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(required=True)
@@ -1260,6 +1325,23 @@ def main() -> None:
     skin_parser.add_argument("--blur", type=float, default=5.0)
     skin_parser.add_argument("--strength", type=float, default=0.85)
     skin_parser.set_defaults(func=postprocess_skin_tone)
+    sharpen_parser = sub.add_parser("postprocess-hires-sharp")
+    sharpen_parser.add_argument("--image", required=True)
+    sharpen_parser.add_argument("--face-mask", required=True)
+    sharpen_parser.add_argument("--output", required=True)
+    sharpen_parser.add_argument("--mask-threshold", type=int, default=32)
+    sharpen_parser.add_argument("--global-radius", type=float, default=1.2)
+    sharpen_parser.add_argument("--global-percent", type=int, default=110)
+    sharpen_parser.add_argument("--global-threshold", type=int, default=2)
+    sharpen_parser.add_argument("--global-blend", type=float, default=0.35)
+    sharpen_parser.add_argument("--face-radius", type=float, default=1.8)
+    sharpen_parser.add_argument("--face-percent", type=int, default=190)
+    sharpen_parser.add_argument("--face-threshold", type=int, default=2)
+    sharpen_parser.add_argument("--face-contrast", type=float, default=1.04)
+    sharpen_parser.add_argument("--face-grow", type=int, default=28)
+    sharpen_parser.add_argument("--face-blur", type=float, default=14.0)
+    sharpen_parser.add_argument("--face-blend", type=float, default=0.92)
+    sharpen_parser.set_defaults(func=postprocess_hires_sharp)
     args = parser.parse_args()
     args.func(args)
 

@@ -25,6 +25,12 @@ def load_mask(path: Path, *, threshold: int = 32) -> np.ndarray:
     return arr >= threshold
 
 
+def resize_mask(mask: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    image = Image.fromarray(mask.astype(np.uint8) * 255, mode="L")
+    resized = image.resize(size, Image.Resampling.BILINEAR)
+    return np.asarray(resized, dtype=np.uint8) >= 32
+
+
 def save_mask(mask: np.ndarray, path: Path) -> None:
     Image.fromarray((mask.astype(np.uint8) * 255), mode="L").save(path)
 
@@ -201,6 +207,11 @@ def main() -> None:
     rgb = load_rgb(image_path)
     candidate_mask = load_mask(candidate_mask_path, threshold=args.threshold)
     face_mask = load_mask(face_mask_path, threshold=args.threshold)
+    height, width = rgb.shape[:2]
+    if candidate_mask.shape != (height, width):
+        candidate_mask = resize_mask(candidate_mask, (width, height))
+    if face_mask.shape != (height, width):
+        face_mask = resize_mask(face_mask, (width, height))
 
     # Exclude the already-solved face/neck region from body-skin harmonization.
     candidate_mask &= ~dilate(face_mask, 12)

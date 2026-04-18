@@ -11,6 +11,9 @@ Updated: 2026-04-18
 - SimplePod env keys are expected in `.env`; secrets stay untracked.
 - Visual-prompt hybrid builder now stops at the clean face-solved composite and saves `pre_skin_harmonize` plus `target_skin_mask` for downstream skin-tone processing.
 - Subject-agnostic exposed-skin harmonization now runs as a deterministic remote postprocess: refine semantic skin mask -> exclude solved face/neck region -> gate by broad skin-color plausibility, face-tone compatibility, texture smoothness, and minimum meaningful area -> transfer solved face tone onto non-face exposed skin.
+- The active visual-prompt branch now also carries a separate hi-res refinement tail: upscale clean composite -> low-denoise SDXL refine -> ReActor identity lock -> optional hi-res skin postprocess when the base-resolution pass already approved non-face skin.
+- The active visual-prompt branch now uses style-only CLIP prompting plus a precision inner-face SDEdit stage on `sd_xl_base_1.0.safetensors` so the seam correction nudges comic-book color/style without redrawing the entire face.
+- The live `8191` backend does not expose `codeformer` as a `ReActorFaceSwap.face_restore_model` choice; the checked-in graph therefore uses the strongest live-compatible restore weld while keeping the builder parameterized for a future CodeFormer-capable backend.
 - Current repo state is shutdown-safe: workflows, scripts, docs, and the new `spiderman.png` target asset are saved locally and ready to redeploy in the next session.
 
 ## Next Run
@@ -67,6 +70,27 @@ The ReActor baseline is validated, but the InstantID/crop-stitch branch is still
   - Fixed that by making root-level target deployment automatic, labeling matrix runs by target slug, tightening the skin-color gate, adding a texture-smoothness gate, and requiring a minimum meaningful non-face skin area before harmonization.
   - Final Spider-Man matrix now skips exposed-skin harmonization for all four current test subjects with `STATUS=skipped` / `REASON=no_non_face_skin`, which is the correct behavior for a fully covered suit.
   - Superman regression still reports a real non-face skin region (`PIXELS=18787` on the `7_year_old_face` check), so the exposed-skin pass still runs where it should.
+- Hi-res branch validation on the visual-prompt branch:
+  - First hi-res draft wrote `final_hires_*` to a global output prefix, which made batch target validation unsafe because runs could collide.
+  - Fixed that by giving `final_hires` a per-run prefix in the matrix runner and resizing masks inside the remote postprocess for hi-res images.
+  - First hi-res skin postprocess draft also reintroduced Spider-Man glove false positives after upscaling because the smoother costume texture passed the exposed-skin detector.
+  - Fixed that by making hi-res skin postprocess conditional on the base-resolution postprocess succeeding first.
+  - Final Spider-Man hi-res matrix: `test_outputs/visual_prompt_subject_matrix_spiderman_hires_final/` with all four subjects reporting `STATUS=skipped` / `REASON=no_non_face_skin`.
+  - Final Superman hi-res matrix: `test_outputs/visual_prompt_subject_matrix_superman_hires_final/` with all four subjects reporting `STATUS=ok` on both base and hi-res skin postprocess passes. Representative hi-res pixel counts: `43996`, `43900`, `40398`, `44064`.
+- Face-detail preservation refactor on the visual-prompt branch:
+  - Stripped subject-identity language out of the positive CLIP prompt so style/lighting text no longer fights PuLID and IP-Adapter.
+  - Moved the seam correction onto a second `CheckpointLoaderSimple` using `sd_xl_base_1.0.safetensors` rather than the inpaint checkpoint.
+  - Tightened the inner-face mask defaults from grow/blur `12/10` to `6/6` so only the central face region is color-corrected.
+  - Added a saved `inner_face_sdedit` checkpoint for direct inspection of the low-denoise detail pass before compositing.
+  - Fresh Superman subject matrix on port `8191`: `test_outputs/visual_prompt_subject_matrix_superman_20260418_131858/`.
+  - Visual result: the new `final` / `final_hires` outputs preserve sharper eyes, mouth edges, and facial shading than the earlier `20260417_221332` matrix while keeping the exposed-skin pass working.
+- Low-complexity deterministic sharpen sidecar on the visual-prompt branch:
+  - Added a separate comparison output path driven by `scripts/remote_hires_sharpen.py`.
+  - It runs after `final_hires` or `final_hires_postprocess`, uses the inner-face mask as a guide, and writes `final_hires_sharp_*` without altering the main workflow outputs.
+  - Applied across the current Superman detail-preservation matrix at `test_outputs/visual_prompt_subject_matrix_superman_20260418_131858/` for all five current subjects.
+  - A one-subject end-to-end rerun on port `8191` confirmed the matrix runner now writes `final_hires_sharp_*` automatically: `/tmp/visual_prompt_single_matrix_run/`.
+  - Visual checks on `7_year_old_face`, `african_child`, `south_asian_teenager`, and `white_european_child` showed stronger eye highlights, crisper lash/brow edges, and slightly cleaner hairline separation without obvious halo artifacts.
+  - This approach is mechanically much simpler than the SDEdit branch, so it should be kept in the final comparison even if the quality gain is smaller.
 - Removed literal `superman face` prompt bias from the InstantID builder defaults so the older experimental branches are no longer hard-coded to the previous target.
 - Added `scripts/remote_skin_tone_postprocess.py` and `scripts/simplepod.py postprocess-skin-tone` so the exposed-skin correction runs on the remote pod after the main workflow finishes.
 - `scripts/run_visual_prompt_subject_matrix.py` now runs that postprocess automatically and downloads `final_postprocess_*.png` plus `target_skin_mask_refined_*.png` with each subject result set.

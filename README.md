@@ -57,6 +57,27 @@ The current visual-prompt pipeline uses two stages:
 
 This replaced the earlier masked generative skin inpaint tail, which visually regressed into gray hand patches during matrix testing.
 
+The current builder also includes a separate hi-res branch that:
+
+- upscales the clean composite,
+- runs a base-SDXL low-denoise precision refine,
+- reapplies ReActor as a final identity lock,
+- and only runs hi-res exposed-skin harmonization when the base-resolution pass already found meaningful non-face skin.
+
+For comparison work, the matrix runner also supports a second low-complexity detail pass after `final_hires`:
+
+- `scripts/remote_hires_sharpen.py` applies deterministic unsharp sharpening,
+- it blends a mild global pass with a stronger face-guided pass driven by the inner-face mask,
+- and it writes a separate `final_hires_sharp_*` output so it can be judged against the SDEdit-based hi-res result instead of replacing it.
+
+The current face-detail architecture also strips subject-identity text bias from the prompt and uses a precision inner-face SDEdit pass:
+
+- the positive prompt is style-and-lighting only, so PuLID/IP-Adapter carry the physical identity load,
+- the seam stage runs on `sd_xl_base_1.0.safetensors` at very low denoise over the ReActor result and composites back only through the inner-face mask,
+- the checked-in restore weld uses the best backend-compatible ReActor face restorer on the current pod.
+
+On the current SimplePod backend, `ReActorFaceSwap` does not expose a `codeformer` restore-model option in `/object_info`; only `none` and `GFPGANv1.4.pth` are available. The builder is therefore parameterized so a future backend can switch to `codeformer` without changing the graph shape, but the checked-in default remains the live-compatible restore model.
+
 The deploy helper now uploads all root-level image assets automatically, so adding a new target such as `spiderman.png` does not require hand-editing `scripts/simplepod.py` first.
 
 ## Generate or regenerate the workflow JSON

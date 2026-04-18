@@ -197,3 +197,27 @@ Fix: Use a stricter exposed-skin refinement stack: exclude the solved face mask,
 Problem: The deploy helper originally hard-coded a short input file list, so adding a new target image such as `spiderman.png` required editing `scripts/simplepod.py` before the remote pod could queue it.
 
 Fix: Discover root-level image assets dynamically for deployment and keep matrix outputs labeled by target slug so new targets can be validated without helper surgery or output collisions.
+
+## Hi-Res Outputs Must Be Namespaced Per Run
+
+Problem: The first hi-res visual-prompt branch wrote `final_hires_*` to a shared default prefix instead of the per-target/per-subject matrix run directory. That made batched validation unsafe because later runs could overwrite earlier hi-res outputs.
+
+Fix: Pass an explicit `--hires-filename-prefix` from the matrix runner so hi-res outputs live under the same target/subject run directory as the base outputs.
+
+## Hi-Res Upscaling Can Reintroduce Costume False Positives
+
+Problem: On Spider-Man, the base-resolution exposed-skin postprocess correctly skipped because there was no meaningful non-face skin. After upscaling, the smoother glove texture could pass the detector again and trigger a false hi-res skin harmonization pass.
+
+Fix: Do not let the hi-res branch make an independent exposed-skin decision. Only run hi-res skin postprocess when the base-resolution postprocess already returned `STATUS=ok`; otherwise keep the hi-res result unchanged.
+
+## ReActor Restore Choices Are Backend-Specific
+
+Problem: The visual-prompt detail-preservation refactor initially switched `ReActorFaceSwap.face_restore_model` to `codeformer`, but the live `8191` backend's `/object_info/ReActorFaceSwap` only exposed `none` and `GFPGANv1.4.pth`. ComfyUI then silently pruned the downstream ReActor branch, so only the earliest save nodes executed.
+
+Fix: Query `/object_info/ReActorFaceSwap` before assuming a restore-model token exists on the target backend. Keep the builder parameterized, but default to a live-supported restore model unless the remote node registry explicitly advertises `codeformer`.
+
+## Deterministic Sharpen Must Stay Sidecar
+
+Problem: A deterministic hi-res sharpen pass can improve eye and hair-edge crispness, but it does not create new structural information. If it is baked into the only final output path, it becomes harder to judge whether apparent improvement is real facial recovery or just post-sharpen contrast.
+
+Fix: Keep deterministic sharpening as a separate comparison output such as `final_hires_sharp_*`. Judge it against the unsharpened hi-res result and the SDEdit-based path before deciding whether the extra pass is worth its complexity.
