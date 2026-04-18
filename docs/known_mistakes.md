@@ -60,6 +60,18 @@ Problem: ComfyUI browser automation can get stuck on auth or SPA state when Simp
 
 Fix: Prefer SSH/API checks for setup and use human-in-the-loop browser review only when visual workflow actions are faster or safer.
 
+## Split Env Drift
+
+Problem: Creating a second deployment `.env` beside the app drifts the active SimplePod host, auth token, and storage settings away from the shared `faceswap` runtime.
+
+Fix: Read the shared `../faceswap/.env` directly and keep deployment-specific overrides optional. Do not fork a second committed or ad hoc env file for this repo.
+
+## UI Dependency Assumptions
+
+Problem: Treating the frontend stack as if it lives entirely inside `.venv` leads to broken review runs. The FastAPI app and Python-side checks are in `.venv`, but React, Vite, and Playwright are installed with `npm` under `node_modules`.
+
+Fix: For deployment UI review, verify both environments. Use `.venv/bin/python scripts/review_deploy_ui.py`, which checks Python packages and Node packages before running the demo flow or UI screenshots.
+
 ## Cartoon Target Keypoints
 
 Problem: InstantID face keypoint extraction can return a very sparse keypoint image for stylized cartoon targets, which makes target pose transfer weak even when the subject identity result is good.

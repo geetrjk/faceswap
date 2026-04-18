@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>faceswap_deploy</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">SimplePod Deployment Console</p>
+        <h1>Stable Face Swap Ops, Wired to the Shared ComfyUI Stack.</h1>
+        <p class="lede">
+          This UI runs against the existing SimplePod instance, reuses the shared
+          <code>faceswap/.env</code>, and queues the checked-in stable workflow without touching the live service state.
+        </p>
+        <div id="health" class="health-grid"></div>
+      </section>
+
+      <section class="workspace">
+        <div class="panel intake">
+          <div class="panel-header">
+            <p class="panel-kicker">Launch</p>
+            <h2>Queue a Deployment Job</h2>
+          </div>
+
+          <form id="job-form" class="job-form">
+            <label class="field upload-field">
+              <span>Subject Upload</span>
+              <input id="subject" name="subject" type="file" accept="image/*" required />
+            </label>
+            <div id="subject-preview" class="subject-preview empty">
+              <span>Upload preview</span>
+            </div>
+
+            <div class="field">
+              <span>Target Template</span>
+              <div id="templates" class="template-grid"></div>
+            </div>
+
+            <button id="submit-button" class="submit-button" type="submit">
+              Queue Stable Workflow
+            </button>
+            <p id="form-status" class="form-status"></p>
+          </form>
+        </div>
+
+        <div class="panel jobs">
+          <div class="panel-header">
+            <p class="panel-kicker">Telemetry</p>
+            <h2>Recent Jobs</h2>
+          </div>
+          <div id="jobs" class="jobs-list"></div>
+        </div>
+      </section>
+    </main>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Deploy UI Review"
+  short_description: "Run the deploy UI review loop"
+  default_prompt: "Use $deploy-ui-review to validate the deploy UI, run the safe demo flow, and capture fresh review screenshots."
+
+policy:
+  allow_implicit_invocation: true

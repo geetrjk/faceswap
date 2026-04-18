@@ -8,12 +8,21 @@ __pycache__/
 *.pyc
 *.pyo
 docs/logs/
+.pycache/
 
 # Virtual Environments
 venv/
 env/
 .venv/
 .env
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+
+# Local review artifacts
+tmp_ui_review/
+var/
 
 # ComfyUI specific (if any local outputs are generated)
 output/

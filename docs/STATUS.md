@@ -4,6 +4,13 @@ Updated: 2026-04-18
 
 ## Current State
 
+- Deployment branch now includes a FastAPI app under `app/` that serves a polished UI and queues the stable shared workflow through the local ComfyUI API.
+- Deployment branch now also includes a React/Vite frontend under `frontend/`, a safe demo-mode API path for full review without shared Neon/R2, and a reusable runner at `scripts/review_deploy_ui.py`.
+- Deployment config is wired to read the shared sibling env at `../faceswap/.env` by default. No new env file was added in this repo.
+- Stable deployment workflow source is the shared artifact at `../faceswap/workflows/stable/visual_prompt_hybrid_v1_api.json`, with per-job input staging and per-job output prefixes so shared workflow files and shared output paths are not mutated in place.
+- Deployment metadata is designed for Neon via `NEON_DATABASE_URL`; user uploads and generated artifacts are designed for Cloudflare R2 via `R2_*` keys added to the shared env.
+- This branch did not stop, restart, or kill any shared ComfyUI or workflow-dev process on the existing SimplePod instance.
+- Repo-local skill added at `.agents/skills/deploy-ui-review/SKILL.md` so future UI review/test runs can call one script instead of reconstructing the flow manually.
 - API workflow exists at `workflows/faceswap_subject_on_character_api.json`.
 - UI workflow exists at `workflows/faceswap_subject_on_character_ui.json`.
 - Workflow builder exists at `scripts/build_faceswap_workflow.py` and is the source of truth for both workflow JSON files.

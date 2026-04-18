@@ -1,139 +1,115 @@
-# faceswap
+# faceswap_deploy
 
-Subject-on-character face swap workflow for ComfyUI with:
-- ReActor face swap,
-- explicit intermediate previews,
-- local-first run path (no SimplePod required).
+Deployment app for the shared SimplePod ComfyUI face-swap stack.
 
-## What is included
+This repo now contains a small FastAPI app that sits in front of the existing `faceswap` workflow assets and queues the stable workflow against the local ComfyUI service on the same SimplePod instance.
 
-- `scripts/build_faceswap_workflow.py`: generates a ComfyUI API workflow JSON.
-- `scripts/build_instantid_workflow.py`: generates a separate experimental SDXL + InstantID workflow.
-- `scripts/simplepod.py`: profiles, deploys, and preflights the SimplePod ComfyUI instance.
-- `workflows/faceswap_subject_on_character_api.json`: API prompt for automated queueing.
-- `workflows/faceswap_subject_on_character_ui.json`: browser-runnable ComfyUI graph for manual review.
-- `workflows/instantid_subject_pose_style_api.json`: experimental API prompt for subject-first InstantID generation.
-- `workflows/instantid_subject_pose_style_ui.json`: browser-runnable experimental InstantID graph.
-- `.agents/skills/remote-operator/SKILL.md`: reusable remote-operation checklist.
-- `docs/runbook.md`: run steps for local ComfyUI and SimplePod usage.
-- `docs/instantid_experiment.md`: setup notes for the subject-first InstantID alternative.
-- `docs/known_mistakes.md`: compact ledger of mistakes and fixes to avoid repeating.
+## Architecture
 
-## Workflow strategy
+- Frontend: polished single-page UI served from this app.
+- Backend: FastAPI API that stages inputs, writes metadata to Neon, stores user uploads and outputs in Cloudflare R2, and queues ComfyUI locally.
+- Workflow source: `../faceswap/workflows/stable/visual_prompt_hybrid_v1_api.json`
+- Shared env source: `../faceswap/.env`
 
-1. Load **subject** face image and **target** character image.
-2. Perform a ReActor swap from subject identity onto the target face region.
-3. Apply one lightweight face-restore pass with `GFPGANv1.4.pth`.
-4. Save the base swap output as `faceswap/final_*`.
+The deployment app intentionally reuses the existing SimplePod setup instead of introducing another workflow host, another env file, or another storage path.
 
-This is intentionally smaller than the earlier diffusion/detailer idea. On a 12 GB SimplePod GPU, the first milestone is a reliable base swap; diffusion cleanup can be added after that works.
+## What Changed
 
-## Experimental InstantID path
+- `app/main.py`: API server and static asset host.
+- `app/config.py`: shared-env loader and deployment settings.
+- `app/database.py`: Neon-backed job metadata store.
+- `app/demo.py`: safe demo-mode fallback for end-to-end UI and API review when shared Neon/R2 keys are not present yet.
+- `app/storage.py`: R2 upload helper.
+- `app/comfy.py`: local ComfyUI queue and history client.
+- `app/workflow.py`: stable workflow patching and template discovery.
+- `frontend/*`: React/Vite deployment UI.
+- `.agents/skills/deploy-ui-review/SKILL.md`: reusable review skill for this repo.
+- `scripts/review_deploy_ui.py`: one-command review runner for validation, demo flow, and screenshots.
+- `scripts/run_deploy_app.py`: local app runner.
 
-The ReActor workflow remains the baseline. For subject-first generation that tries to keep the subject's age cues, head shape, and hairstyle while taking pose/style from the target, use the separate InstantID builder:
+## Shared Env Contract
 
-```bash
-python3 scripts/build_instantid_workflow.py
-.venv/bin/python scripts/simplepod.py deploy-instantid
-.venv/bin/python scripts/simplepod.py preflight-instantid
-```
+The app reads `../faceswap/.env` directly by default.
 
-This path requires additional SDXL base/inpaint, InstantID, ControlNet, AntelopeV2, and Buffalo-L face-analysis models. See `docs/instantid_experiment.md`.
-
-## Visual Prompt Hybrid Path
-
-For the broader subject-first SDXL branch with semantic masking, PuLID/IP-Adapter guidance, and deterministic exposed-skin tone harmonization, use:
-
-```bash
-python3 scripts/build_visual_prompt_hybrid_workflow.py
-.venv/bin/python scripts/simplepod.py deploy-visual-prompt-hybrid
-.venv/bin/python scripts/simplepod.py preflight-visual-prompt
-```
-
-The current visual-prompt pipeline uses two stages:
-
-- the ComfyUI workflow generates the clean face-solved composite and saves `pre_skin_harmonize` plus `target_skin_mask`,
-- `scripts/remote_skin_tone_postprocess.py` refines that mask, excludes the face/neck region, and transfers solved face tone onto exposed non-face skin regions deterministically.
-
-This replaced the earlier masked generative skin inpaint tail, which visually regressed into gray hand patches during matrix testing.
-
-The deploy helper now uploads all root-level image assets automatically, so adding a new target such as `spiderman.png` does not require hand-editing `scripts/simplepod.py` first.
-
-## Generate or regenerate the workflow JSON
-
-```bash
-python scripts/build_faceswap_workflow.py
-```
-
-This writes both the API prompt and the UI graph. Keep them together in reviews and commits.
-
-You can override assets/models:
-
-```bash
-python scripts/build_faceswap_workflow.py \
-  --subject-image my_subject.jpg \
-  --target-image my_target.png \
-  --swap-model inswapper_128.onnx \
-  --face-restore-model GFPGANv1.4.pth
-```
-
-## SimplePod quick path
-
-The `.env` file should define:
+Existing keys already used by the repo:
 
 ```bash
 SIMPLEPOD_SSH_HOST=...
-SIMPLEPOD_SSH_PORT=22
-SIMPLEPOD_SSH_USER=root
+SIMPLEPOD_SSH_PORT=...
+SIMPLEPOD_SSH_USER=...
 SIMPLEPOD_PASSWORD=...
 SIMPLEPOD_COMFYUI_URL=...
 ```
 
-Install the helper dependency in a local venv, profile the pod, deploy files, then preflight:
-
-For a fresh SimplePod server, use the setup script:
+Additional keys expected for this deployment app:
 
 ```bash
-scripts/setup_simplepod_instantid.sh
+NEON_DATABASE_URL=postgresql://...
+R2_ACCOUNT_ID=...
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET=...
+R2_PUBLIC_BASE_URL=https://cdn.example.com
 ```
 
-It installs local helper dependencies, installs ReActor and InstantID requirements on the pod, deploys all workflow variants, pauses for the required ComfyUI/SimplePod restart, then runs preflight checks. Remote model downloads are size-checked and resumable, so rerunning the script should skip completed files and resume partial files instead of starting over.
+Optional overrides:
 
-Manual equivalent for the ReActor baseline:
+```bash
+FACE_SWAP_SHARED_ENV=/absolute/path/to/.env
+FACE_SWAP_SHARED_ROOT=/absolute/path/to/faceswap
+COMFYUI_API_URL=http://127.0.0.1:8188
+COMFYUI_INPUT_DIR=/app/ComfyUI/input
+COMFYUI_OUTPUT_DIR=/app/ComfyUI/output
+COMFYUI_TOKEN_FILE=/app/ComfyUI/login/PASSWORD
+STABLE_WORKFLOW_API_PATH=/absolute/path/to/visual_prompt_hybrid_v1_api.json
+STABLE_WORKFLOW_UI_PATH=/absolute/path/to/visual_prompt_hybrid_v1_ui.json
+TARGET_TEMPLATE_DIR=/absolute/path/to/faceswap
+DEPLOY_LOCAL_STATE_DIR=/absolute/path/to/faceswap_deploy/var
+```
+
+## Run
+
+Create a virtualenv, install dependencies, then start the app:
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python scripts/simplepod.py profile
-.venv/bin/python scripts/build_faceswap_workflow.py
-.venv/bin/python scripts/simplepod.py deploy
-.venv/bin/python scripts/simplepod.py init-auth
-.venv/bin/python scripts/simplepod.py preflight
-.venv/bin/python scripts/simplepod.py queue --wait 300
+.venv/bin/pip install -r requirements.txt
+npm install
+.venv/bin/python scripts/run_deploy_app.py
 ```
 
-The default workflow uses `GFPGANv1.4.pth` at full visibility plus ReActor FaceBoost. Use `--no-face-boost` when regenerating if you want the simpler base swap only.
+The runner defaults to `0.0.0.0:8000`.
 
-For human-in-the-loop review in ComfyUI, the workflow now writes:
+## Review Runner
 
-- `faceswap/intermediate/subject_input_*`
-- `faceswap/intermediate/target_input_*`
-- `faceswap/intermediate/plain_swap_*`
-- `faceswap/final_*`
+For the practical repeatable review flow, use:
 
-Load `faceswap_subject_on_character_ui` from the ComfyUI workflow browser when running manually. The `_api` file is for `scripts/simplepod.py queue` and will appear empty if opened as a UI graph.
+```bash
+.venv/bin/python scripts/review_deploy_ui.py
+```
 
-## Minimum SimplePod spec
+This checks Python and Node dependencies, validates the stable workflow JSONs, runs the demo API flow end to end, builds the React frontend, and captures desktop/mobile UI screenshots under `tmp_ui_review/`.
 
-Recommended minimum for this base ReActor pipeline:
+Optional live queue:
 
-- GPU: NVIDIA with 12 GB VRAM minimum; 16 GB+ preferred for later diffusion cleanup.
-- RAM: 24 GB minimum; 32 GB preferred.
-- Disk: 40 GB minimum; 80 GB+ preferred once ReActor, ONNX Runtime, swap/restore models, and cache files are included.
-- Image: Python 3.10+ with CUDA/PyTorch support and ComfyUI already installed or installable.
+```bash
+.venv/bin/python scripts/review_deploy_ui.py --live-queue --live-wait 900
+```
 
-For an easier first run, choose a 16 GB VRAM GPU and treat 12 GB as the budget/debug floor.
+Only use `--live-queue` when the user explicitly wants a real ComfyUI run.
 
-## Note about this environment
+## Safe Operating Notes
 
-Direct GitHub outbound access was blocked in this container, so the workflow was implemented locally from the requested design constraints and ComfyUI node conventions rather than by downloading and editing the referenced JSON directly in-place.
+- This app queues jobs through the local ComfyUI API only.
+- It does not stop, restart, or kill ComfyUI processes.
+- It stages per-job input filenames to avoid clobbering shared files in the ComfyUI input directory.
+- It rewrites `SaveImage` prefixes per job so outputs stay isolated under `faceswap/deploy/<job-id>/...`.
+- It uses the checked-in stable workflow from the sibling `faceswap` repo rather than editing shared workflow files in place.
+
+## Verification
+
+Non-disruptive verification for this branch:
+
+```bash
+.venv/bin/python scripts/review_deploy_ui.py --skip-screenshots
+```
