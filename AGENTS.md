@@ -18,6 +18,7 @@ Build a clean, reusable SimplePod-ready ComfyUI base pipeline for subject-to-cha
 - Profile a new pod before provisioning or queueing: GPU, disk, Python, pip, and ComfyUI root path.
 - Prefer `scripts/simplepod.py` for remote checks and file sync. Avoid ad hoc SSH commands unless the helper is missing the needed action.
 - Keep remote execution simple: deploy workflow/assets, verify required nodes/files, then queue from ComfyUI or via a small API script once the graph is validated.
+- **For all UI experimentation and frontend work, use the SimplePod instance directly as the main development environment.** Do not build or run npm locally; assume testing, debugging, and validation happen on the SimplePod environment.
 - Record repeated mistakes and fixes in `docs/known_mistakes.md` before ending a session.
 
 ## Minimal Agent Setup

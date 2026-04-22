@@ -1210,6 +1210,95 @@ def postprocess_skin_tone(_args) -> None:
             print(err, file=sys.stderr, end="")
 
 
+def install_node(_args) -> None:
+    script = """
+set -euo pipefail
+if command -v node >/dev/null 2>&1; then
+  echo "Node.js is already installed: $(node -v)"
+  exit 0
+fi
+echo "Installing Node.js v22..."
+curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/nodesource_setup.sh
+bash /tmp/nodesource_setup.sh
+apt-get install -y nodejs
+echo "Node.js installed: $(node -v)"
+"""
+    with connect() as client:
+        print("Checking/installing Node.js on SimplePod...")
+        code = run_remote_stream(client, f"bash -lc {shlex.quote(script)}")
+        if code != 0:
+            raise SystemExit(code)
+
+
+def deploy_app(_args) -> None:
+    import tempfile
+    import zipfile
+    
+    with connect() as client:
+        comfy_root = find_comfy_root(client)
+        app_dir = posixpath.join(posixpath.dirname(comfy_root), "faceswap_deploy")
+        print(f"Deploying app to {app_dir} ...")
+        run_remote(client, f"mkdir -p {shlex.quote(app_dir)}")
+        
+        sftp = client.open_sftp()
+        try:
+            for filename in [".env", "requirements.txt", "package.json", "package-lock.json", "vite.config.js", "spiderman.png", "superman.png", "superman adult.png", "subject_5 year curly.webp"]:
+                local_path = ROOT / filename
+                if local_path.exists():
+                    sftp.put(str(local_path), posixpath.join(app_dir, filename))
+            
+            for directory in ["app", "scripts", "frontend", "workflows"]:
+                local_dir = ROOT / directory
+                if not local_dir.exists():
+                    continue
+                remote_dir = posixpath.join(app_dir, directory)
+                run_remote(client, f"mkdir -p {shlex.quote(remote_dir)}")
+                with tempfile.NamedTemporaryFile(suffix=".zip") as tmp:
+                    with zipfile.ZipFile(tmp.name, "w") as zf:
+                        for path in local_dir.rglob("*"):
+                            if "__pycache__" in path.parts or path.name.startswith(".DS_Store") or "node_modules" in path.parts:
+                                continue
+                            if path.is_file():
+                                zf.write(path, path.relative_to(local_dir))
+                    remote_zip = posixpath.join(remote_dir, "upload.zip")
+                    print(f"Uploading {directory} archive...")
+                    sftp.put(tmp.name, remote_zip)
+                    run_remote(client, f"cd {shlex.quote(remote_dir)} && python3 -m zipfile -e upload.zip . && rm upload.zip")
+        finally:
+            sftp.close()
+
+        print("Building UI on SimplePod...")
+        code = run_remote_stream(client, f"cd {shlex.quote(app_dir)} && npm install && npm run build")
+        if code != 0:
+            raise SystemExit("Failed to build UI remotely.")
+
+        print("Installing Python requirements on SimplePod...")
+        code, out, err = run_remote(client, f"cd {shlex.quote(app_dir)} && python3 -m pip install --break-system-packages -r requirements.txt", check=False)
+        if code != 0:
+            print(err, file=sys.stderr)
+            raise SystemExit("Failed to install requirements.")
+        print("App deployed successfully.")
+
+
+def serve_app(_args) -> None:
+    env = load_env()
+    host = env.get("SIMPLEPOD_SSH_HOST", "<host>")
+    port_env = env.get("SIMPLEPOD_SSH_PORT", "22")
+    print(f"== SimplePod UI Serving ==")
+    print(f"The UI is starting on the SimplePod at port 8000.")
+    print(f"If the port is publicly exposed, access it at: http://{host}:8000")
+    print(f"If not, run this command locally in a new terminal to tunnel:")
+    print(f"  ssh -N -L 8000:127.0.0.1:8000 root@{host} -p {port_env}")
+    print(f"Then open http://localhost:8000 in your browser.")
+    print(f"===========================\n")
+    
+    with connect() as client:
+        comfy_root = find_comfy_root(client)
+        app_dir = posixpath.join(posixpath.dirname(comfy_root), "faceswap_deploy")
+        command = f"cd {shlex.quote(app_dir)} && python3 scripts/run_deploy_app.py"
+        run_remote_stream(client, command)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(required=True)
@@ -1260,6 +1349,9 @@ def main() -> None:
     skin_parser.add_argument("--blur", type=float, default=5.0)
     skin_parser.add_argument("--strength", type=float, default=0.85)
     skin_parser.set_defaults(func=postprocess_skin_tone)
+    sub.add_parser("install-node").set_defaults(func=install_node)
+    sub.add_parser("deploy-app").set_defaults(func=deploy_app)
+    sub.add_parser("serve-app").set_defaults(func=serve_app)
     args = parser.parse_args()
     args.func(args)
 

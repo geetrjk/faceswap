@@ -30,9 +30,10 @@ class JobRecord:
 class Database:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
+        self._local_jobs: dict[str, JobRecord] = {}
 
     def is_configured(self) -> bool:
-        return bool(self._settings.neon_database_url)
+        return True  # Always configured, uses local fallback if Neon is missing
 
     def _connect(self) -> psycopg.Connection[Any]:
         if not self._settings.neon_database_url:
@@ -40,7 +41,7 @@ class Database:
         return psycopg.connect(self._settings.neon_database_url, row_factory=dict_row)
 
     def ensure_schema(self) -> None:
-        if not self.is_configured():
+        if not self._settings.neon_database_url:
             return
         with self._connect() as conn, conn.cursor() as cur:
             cur.execute(
@@ -73,6 +74,24 @@ class Database:
         target_template: str,
         workflow_name: str,
     ) -> None:
+        if not self._settings.neon_database_url:
+            now = _iso(datetime.now(timezone.utc))
+            self._local_jobs[job_id] = JobRecord(
+                id=job_id,
+                status="queued",
+                subject_original_name=subject_original_name,
+                subject_r2_key=subject_r2_key,
+                subject_r2_url=subject_r2_url,
+                target_template=target_template,
+                workflow_name=workflow_name,
+                comfy_prompt_id=None,
+                artifacts=[],
+                error_message=None,
+                created_at=now,
+                updated_at=now,
+            )
+            return
+
         with self._connect() as conn, conn.cursor() as cur:
             cur.execute(
                 """
@@ -108,6 +127,21 @@ class Database:
         artifacts: list[dict[str, Any]] | None = None,
         error_message: str | None = None,
     ) -> None:
+        if not self._settings.neon_database_url:
+            record = self._local_jobs.get(job_id)
+            if not record:
+                return
+            if status is not None:
+                record.status = status
+            if comfy_prompt_id is not None:
+                record.comfy_prompt_id = comfy_prompt_id
+            if artifacts is not None:
+                record.artifacts = artifacts
+            if error_message is not None or status == "failed":
+                record.error_message = error_message
+            record.updated_at = _iso(datetime.now(timezone.utc))
+            return
+
         assignments: list[str] = ["updated_at = %s"]
         values: list[Any] = [datetime.now(timezone.utc)]
         if status is not None:
@@ -132,12 +166,19 @@ class Database:
             conn.commit()
 
     def get_job(self, job_id: str) -> JobRecord | None:
+        if not self._settings.neon_database_url:
+            return self._local_jobs.get(job_id)
+
         with self._connect() as conn, conn.cursor() as cur:
             cur.execute("select * from deploy_jobs where id = %s", (job_id,))
             row = cur.fetchone()
         return self._row_to_record(row) if row else None
 
     def list_jobs(self, limit: int = 12) -> list[JobRecord]:
+        if not self._settings.neon_database_url:
+            jobs = sorted(self._local_jobs.values(), key=lambda j: j.created_at, reverse=True)
+            return jobs[:limit]
+
         with self._connect() as conn, conn.cursor() as cur:
             cur.execute(
                 """

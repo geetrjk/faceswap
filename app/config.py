@@ -43,6 +43,7 @@ class Settings:
     r2_access_key_id: str | None
     r2_secret_access_key: str | None
     r2_bucket: str | None
+    simplepod_password: str | None
     r2_public_base_url: str | None
     demo_mode: bool
     frontend_dist_dir: Path
@@ -59,16 +60,6 @@ class Settings:
             missing.append(f"workflow:{self.stable_workflow_ui_path}")
         if not self.template_dir.exists():
             missing.append(f"templates:{self.template_dir}")
-        if not self.neon_database_url:
-            missing.append("NEON_DATABASE_URL")
-        if not self.r2_account_id:
-            missing.append("R2_ACCOUNT_ID")
-        if not self.r2_access_key_id:
-            missing.append("R2_ACCESS_KEY_ID")
-        if not self.r2_secret_access_key:
-            missing.append("R2_SECRET_ACCESS_KEY")
-        if not self.r2_bucket:
-            missing.append("R2_BUCKET")
         return missing
 
     def auth_enabled(self) -> bool:
@@ -86,13 +77,13 @@ def get_settings() -> Settings:
     stable_api = Path(
         env_values.get(
             "STABLE_WORKFLOW_API_PATH",
-            str(shared_root / "workflows" / "stable" / "visual_prompt_hybrid_v1_api.json"),
+            str(shared_root / "workflows" / "faceswap_subject_on_character_api.json"),
         )
     ).resolve()
     stable_ui = Path(
         env_values.get(
             "STABLE_WORKFLOW_UI_PATH",
-            str(shared_root / "workflows" / "stable" / "visual_prompt_hybrid_v1_ui.json"),
+            str(shared_root / "workflows" / "faceswap_subject_on_character_ui.json"),
         )
     ).resolve()
     local_state_dir = Path(
@@ -120,6 +111,7 @@ def get_settings() -> Settings:
         r2_access_key_id=env_values.get("R2_ACCESS_KEY_ID"),
         r2_secret_access_key=env_values.get("R2_SECRET_ACCESS_KEY"),
         r2_bucket=env_values.get("R2_BUCKET"),
+        simplepod_password=env_values.get("SIMPLEPOD_PASSWORD"),
         r2_public_base_url=env_values.get("R2_PUBLIC_BASE_URL", "").rstrip("/") or None,
         demo_mode=env_values.get("DEPLOY_UI_DEMO_MODE", "").lower() in {"1", "true", "yes", "on"},
         frontend_dist_dir=(ROOT / "frontend" / "dist").resolve(),

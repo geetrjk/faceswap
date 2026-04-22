@@ -221,8 +221,13 @@ async def create_job(
     stage_input_file(uploaded_subject_path, comfy_subject_path)
     stage_input_file(target_path, comfy_target_path)
 
-    subject_r2_key = f"jobs/{job_id}/uploads/{safe_subject_name}"
-    subject_r2_url = storage.upload_file(uploaded_subject_path, subject_r2_key)
+    if storage.is_configured():
+        subject_r2_key = f"jobs/{job_id}/uploads/{safe_subject_name}"
+        subject_r2_url = storage.upload_file(uploaded_subject_path, subject_r2_key)
+    else:
+        subject_r2_key = None
+        subject_r2_url = None
+
 
     database.create_job(
         job_id=job_id,
@@ -259,13 +264,16 @@ def _run_job(job_id: str, comfy_subject_name: str, comfy_target_name: str) -> No
                 continue
             artifact_name = _artifact_name(output["subfolder"], output["filename"])
             r2_key = f"jobs/{job_id}/artifacts/{artifact_name}/{output['filename']}"
-            public_url = storage.upload_file(local_path, r2_key)
+            if storage.is_configured():
+                public_url = storage.upload_file(local_path, r2_key)
+            else:
+                public_url = None
             artifacts.append(
                 {
                     "name": artifact_name,
                     "filename": output["filename"],
                     "subfolder": output["subfolder"],
-                    "r2_key": r2_key,
+                    "r2_key": r2_key if storage.is_configured() else None,
                     "url": public_url,
                     "local_path": str(local_path),
                 }

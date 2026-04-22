@@ -245,3 +245,40 @@ When changing the pipeline, keep the API and UI workflows together:
 Keep these roles distinct:
 - `_api`: fast iteration and automation through `/prompt`.
 - `_ui`: manual ComfyUI execution with visible nodes, links, previews, and saves.
+
+## 7) UI Development on SimplePod
+
+The Vite frontend and FastAPI backend must run on the SimplePod to have access to the local ComfyUI outputs.
+**Do not run `npm build` or `npm run dev` locally.** The SimplePod is the default environment for UI testing and iteration.
+
+### Setup and Deployment
+
+1. Install Node.js on the SimplePod (if not already installed):
+```bash
+.venv/bin/python scripts/simplepod.py install-node
+```
+
+2. Sync the codebase to the SimplePod and build the UI remotely:
+```bash
+.venv/bin/python scripts/simplepod.py deploy-app
+```
+
+3. Start the FastAPI backend server on the SimplePod:
+```bash
+.venv/bin/python scripts/simplepod.py serve-app
+```
+The `serve-app` command will print instructions on how to access the UI.
+
+### Active UI Development (Hot Reloading)
+
+For active UI development, use VS Code Remote-SSH (or similar) to connect to the SimplePod instance.
+1. Open `/app/faceswap_deploy` (or `/workspace/faceswap_deploy`) in the remote IDE.
+2. In the remote terminal, start the Vite dev server:
+```bash
+npm run dev
+```
+3. In a second remote terminal, start the FastAPI backend:
+```bash
+python3 scripts/run_deploy_app.py
+```
+Forward both ports `5173` (Vite) and `8000` (FastAPI) to your local machine to test live changes.

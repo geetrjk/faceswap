@@ -65,6 +65,11 @@ class ComfyClient:
         token = self._token()
         if token:
             request.add_header("Authorization", f"Bearer {token}")
+        elif self._settings.simplepod_password:
+            import base64
+            auth_string = f"comfyui:{self._settings.simplepod_password}"
+            b64_auth = base64.b64encode(auth_string.encode("utf-8")).decode("utf-8")
+            request.add_header("Authorization", f"Basic {b64_auth}")
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
                 return json.load(response)

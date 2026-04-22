@@ -382,9 +382,9 @@ export default function App() {
         <div className="studio-glow studio-glow--right" />
         <section className="auth-card">
           <div className="brand-block">
-            <p className="brand-kicker">Face Swap Studio</p>
-            <h1>Secure sign-in</h1>
-            <p>Access studio previews from desktop and mobile.</p>
+            <p className="brand-kicker">Portrait AI</p>
+            <h1>Studio Access</h1>
+            <p>High-fidelity face swap technology for creators.</p>
           </div>
           <form className="auth-form" onSubmit={handleLogin}>
             <label className="field-stack">
@@ -418,13 +418,15 @@ export default function App() {
       <header className="studio-header">
         <div className="header-spacer" />
         <div className="brand-lockup">
-          <p className="brand-kicker">Studio</p>
+          <p className="brand-kicker">Portrait AI</p>
           <h1>Face Swap Studio</h1>
         </div>
         <div className="header-actions">
-          <span className="session-chip">{session?.username || "session"}</span>
-          <button className="ghost-pill" onClick={handleLogout} type="button">
-            Log Out
+          <div className="user-profile">
+            <span className="profile-chip">{session?.username || "Guest"}</span>
+          </div>
+          <button className="sign-out-btn" onClick={handleLogout} type="button">
+            Sign Out
           </button>
         </div>
       </header>
@@ -432,8 +434,8 @@ export default function App() {
       <form className="studio-grid" onSubmit={handleSubmit}>
         <section className="studio-panel zone-input">
           <div className="panel-heading">
-            <p className="panel-kicker">Zone 1</p>
-            <h2>Face Input</h2>
+            <p className="panel-step">IDENTITY</p>
+            <h2>Upload Portrait</h2>
           </div>
 
           <label className="drop-zone">
@@ -476,15 +478,18 @@ export default function App() {
                 </div>
               </>
             ) : (
-              <span>Active face preview</span>
+              <div className="face-preview-empty">
+                <span className="placeholder-icon">👤</span>
+                <span>Active portrait</span>
+              </div>
             )}
           </div>
         </section>
 
         <section className="studio-panel zone-templates">
           <div className="panel-heading">
-            <p className="panel-kicker">Zone 2</p>
-            <h2>Template Library</h2>
+            <p className="panel-step">STYLE</p>
+            <h2>Choose Template</h2>
           </div>
 
           <div className="template-library">
@@ -506,19 +511,32 @@ export default function App() {
 
           <div className="mobile-queue-bar">
             <button className="primary-cta primary-cta--full" disabled={submitting} type="submit">
-              {submitting ? "Queueing..." : "Queue Full Body Swap"}
+              {submitting ? "Generating..." : "Generate Portrait"}
             </button>
           </div>
         </section>
 
         <section className="studio-panel zone-output">
           <div className="panel-heading">
-            <p className="panel-kicker">Zone 3</p>
-            <h2>Workspace & Output</h2>
+            <p className="panel-step">RESULT</p>
+            <h2>Final Artwork</h2>
           </div>
 
-          <div className="workspace-preview">
-            {previewUrl ? <img alt="Workspace preview" src={previewUrl} /> : <span>Preview</span>}
+          <div className={`workspace-preview ${submitting ? "workspace-preview--submitting" : ""}`}>
+            {previewUrl ? (
+              <img alt="Workspace preview" src={previewUrl} />
+            ) : (
+              <div className="preview-placeholder">
+                <span className="placeholder-icon">✦</span>
+                <span>Select a style to begin</span>
+              </div>
+            )}
+            {submitting && (
+              <div className="shimmer-overlay">
+                <div className="shimmer-bar" />
+                <div className="generating-badge">CREATING ARTWORK...</div>
+              </div>
+            )}
           </div>
           <div className="preview-caption">
             <strong>{previewTitle}</strong>
@@ -527,16 +545,8 @@ export default function App() {
 
           <div className="run-facts">
             <div className="run-fact">
-              <span>Run ID</span>
-              <strong>{runId}</strong>
-            </div>
-            <div className="run-fact">
               <span>Status</span>
               <strong>{queueState}</strong>
-            </div>
-            <div className="run-fact">
-              <span>Workflow</span>
-              <strong>Stable v1.2</strong>
             </div>
           </div>
 
@@ -577,13 +587,13 @@ export default function App() {
           </div>
 
           <button className="primary-cta primary-cta--desktop" disabled={submitting} type="submit">
-            {submitting ? "Queueing..." : "Queue Full Body Swap"}
+            {submitting ? "Generating..." : "Generate Portrait"}
           </button>
 
           <div className="panel-subsection">
             <div className="section-row">
-              <strong>Past Swaps</strong>
-              <span>{pastSwaps.length} recent</span>
+              <strong>Your Gallery</strong>
+              <span>{pastSwaps.length} creations</span>
             </div>
             <div className="past-swap-list">
               {pastSwaps.length ? (
@@ -607,8 +617,11 @@ export default function App() {
       </form>
 
       <footer className="studio-footer">
-        <span>{statusText || "Ready"}</span>
-        <span>{health?.mode === "review" ? "Review mode" : "Live mode"}</span>
+        <span>{statusText || "System Ready"}</span>
+        <div className="system-dots">
+          <span className={`status-dot ${health?.mode === "review" ? "status-dot--review" : "status-dot--live"}`} />
+          <span>{health?.mode === "review" ? "Review Mode" : "Production"}</span>
+        </div>
       </footer>
     </div>
   );
