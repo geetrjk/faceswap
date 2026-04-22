@@ -17,6 +17,9 @@ BUILD_SCRIPT = ROOT / "scripts" / "build_visual_prompt_hybrid_workflow.py"
 SIMPLEPOD_SCRIPT = ROOT / "scripts" / "simplepod.py"
 TEST_SUBJECTS_DIR = ROOT / "test_subjects"
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+DEFAULT_EXCLUDED_SUBJECTS = {"7 year old face.png"}
+DEFAULT_FACE_COLOR_METHOD = "rgb_gain_selective_preserve_y"
+DEFAULT_FACE_COLOR_STRENGTH = 0.45
 
 
 def slugify(name: str) -> str:
@@ -50,13 +53,42 @@ def main() -> None:
     parser.add_argument("--wait", type=int, default=600)
     parser.add_argument("--local-dir", default=None)
     parser.add_argument("--skip-setup", action="store_true")
+    parser.add_argument("--skip-face-color-sidecar", action="store_true")
+    parser.add_argument(
+        "--face-color-method",
+        choices=[
+            "lab_mean_shift",
+            "lab_mean_std",
+            "lab_selective_shift",
+            "rgb_gain_preserve_y",
+            "rgb_gain_selective_preserve_y",
+            "ycbcr_mean_shift",
+            "ycbcr_mean_std",
+        ],
+        default=DEFAULT_FACE_COLOR_METHOD,
+    )
+    parser.add_argument("--face-color-strength", type=float, default=DEFAULT_FACE_COLOR_STRENGTH)
+    parser.add_argument("--face-color-threshold", type=int, default=32)
+    parser.add_argument("--face-color-face-grow", type=int, default=42)
+    parser.add_argument("--face-color-alpha-dilate", type=int, default=7)
+    parser.add_argument("--face-color-alpha-blur", type=float, default=12.0)
+    parser.add_argument(
+        "--exclude-subject",
+        action="append",
+        default=[],
+        help="Subject filename to exclude from discovery. May be repeated.",
+    )
     args = parser.parse_args()
 
     subjects_dir = Path(args.subjects_dir)
+    excluded = DEFAULT_EXCLUDED_SUBJECTS | set(args.exclude_subject)
     subjects = sorted(
         path
         for path in subjects_dir.iterdir()
-        if path.is_file() and not path.name.startswith(".") and path.suffix.lower() in IMAGE_SUFFIXES
+        if path.is_file()
+        and not path.name.startswith(".")
+        and path.suffix.lower() in IMAGE_SUFFIXES
+        and path.name not in excluded
     )
     if not subjects:
         raise SystemExit(f"No subject images found in {subjects_dir}")
@@ -199,6 +231,59 @@ def main() -> None:
             if hires_sharp.stderr:
                 print(hires_sharp.stderr, file=sys.stderr, end="")
             outputs.append(hires_sharp_remote)
+
+        if not args.skip_face_color_sidecar:
+            if hires_harmonized_remote in outputs:
+                face_color_input = hires_harmonized_remote
+                face_color_output = f"{run_dir}/final_hires_face_reference_{args.face_color_method}_00001_.png"
+                face_color_mask = f"{run_dir}/intermediate/face_reference_mask_hires_{args.face_color_method}_00001_.png"
+            elif hires_image:
+                face_color_input = hires_image
+                face_color_output = f"{run_dir}/final_hires_face_reference_{args.face_color_method}_00001_.png"
+                face_color_mask = f"{run_dir}/intermediate/face_reference_mask_hires_{args.face_color_method}_00001_.png"
+            elif harmonized_remote in outputs:
+                face_color_input = harmonized_remote
+                face_color_output = f"{run_dir}/final_face_reference_{args.face_color_method}_00001_.png"
+                face_color_mask = f"{run_dir}/intermediate/face_reference_mask_{args.face_color_method}_00001_.png"
+            else:
+                face_color_input = pre_skin
+                face_color_output = f"{run_dir}/final_face_reference_{args.face_color_method}_00001_.png"
+                face_color_mask = f"{run_dir}/intermediate/face_reference_mask_{args.face_color_method}_00001_.png"
+
+            face_color = run(
+                [
+                    sys.executable,
+                    str(SIMPLEPOD_SCRIPT),
+                    "postprocess-face-reference-color",
+                    "--source-image",
+                    subject.name,
+                    "--image",
+                    face_color_input,
+                    "--face-mask",
+                    face_mask,
+                    "--output",
+                    face_color_output,
+                    "--refined-mask-output",
+                    face_color_mask,
+                    "--method",
+                    args.face_color_method,
+                    "--strength",
+                    str(args.face_color_strength),
+                    "--threshold",
+                    str(args.face_color_threshold),
+                    "--face-grow",
+                    str(args.face_color_face_grow),
+                    "--alpha-dilate",
+                    str(args.face_color_alpha_dilate),
+                    "--alpha-blur",
+                    str(args.face_color_alpha_blur),
+                ],
+                capture_output=True,
+            )
+            print(face_color.stdout, end="")
+            if face_color.stderr:
+                print(face_color.stderr, file=sys.stderr, end="")
+            outputs.extend([face_color_output, face_color_mask])
 
         subject_dir = local_dir / slug
         subject_dir.mkdir(parents=True, exist_ok=True)

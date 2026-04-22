@@ -32,6 +32,7 @@ SWAP_AND_BAKE_UI_WORKFLOW = ROOT / "workflows" / "swap_and_bake_experiment_ui.js
 VISUAL_PROMPT_HYBRID_WORKFLOW = ROOT / "workflows" / "visual_prompt_hybrid_experiment_api.json"
 VISUAL_PROMPT_HYBRID_UI_WORKFLOW = ROOT / "workflows" / "visual_prompt_hybrid_experiment_ui.json"
 REMOTE_SKIN_TONE_POSTPROCESS = ROOT / "scripts" / "remote_skin_tone_postprocess.py"
+REMOTE_FACE_COLOR_REFERENCE_POSTPROCESS = ROOT / "scripts" / "remote_face_color_reference_postprocess.py"
 REMOTE_HIRES_SHARPEN = ROOT / "scripts" / "remote_hires_sharpen.py"
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 DEFAULT_INPUTS = [
@@ -1211,6 +1212,71 @@ def postprocess_skin_tone(_args) -> None:
             print(err, file=sys.stderr, end="")
 
 
+def postprocess_face_reference_color(_args) -> None:
+    script = REMOTE_FACE_COLOR_REFERENCE_POSTPROCESS.read_text(encoding="utf-8")
+    with connect() as client:
+        comfy_root = find_comfy_root(client)
+
+        def resolve_output(remote_path: str) -> str:
+            if remote_path.startswith("/"):
+                return remote_path
+            return posixpath.join(comfy_root, "output", remote_path)
+
+        def resolve_input(remote_path: str) -> str:
+            if remote_path.startswith("/"):
+                return remote_path
+            return posixpath.join(comfy_root, "input", remote_path)
+
+        payload = json.dumps(
+            {
+                "source_image": resolve_input(_args.source_image),
+                "image": resolve_output(_args.image),
+                "face_mask": resolve_output(_args.face_mask),
+                "output": resolve_output(_args.output),
+                "refined_mask_output": resolve_output(_args.refined_mask_output),
+                "threshold": _args.threshold,
+                "face_grow": _args.face_grow,
+                "alpha_dilate": _args.alpha_dilate,
+                "alpha_blur": _args.alpha_blur,
+                "strength": _args.strength,
+                "method": _args.method,
+            }
+        )
+        remote_script = (
+            "import json, os, shlex, subprocess, sys, tempfile\n"
+            "payload = json.load(sys.stdin)\n"
+            f"script = {script!r}\n"
+            "with tempfile.NamedTemporaryFile('w', suffix='.py', delete=False) as handle:\n"
+            "    handle.write(script)\n"
+            "    path = handle.name\n"
+            "try:\n"
+            "    cmd = ['python3', path]\n"
+            "    for key in ['source_image', 'image', 'face_mask', 'output', 'refined_mask_output', 'threshold', 'face_grow', 'alpha_dilate', 'alpha_blur', 'strength', 'method']:\n"
+            "        cmd.extend([f'--{key.replace(\"_\", \"-\")}', str(payload[key])])\n"
+            "    proc = subprocess.run(cmd, text=True, capture_output=True)\n"
+            "    if proc.stdout:\n"
+            "        print(proc.stdout, end='')\n"
+            "    if proc.stderr:\n"
+            "        print(proc.stderr, file=sys.stderr, end='')\n"
+            "    raise SystemExit(proc.returncode)\n"
+            "finally:\n"
+            "    try:\n"
+            "        os.unlink(path)\n"
+            "    except FileNotFoundError:\n"
+            "        pass\n"
+        )
+        _, out, err = run_remote(
+            client,
+            f"python3 -c {shlex.quote(remote_script)}",
+            check=False,
+            stdin_data=payload,
+        )
+        if out:
+            print(out, end="")
+        if err:
+            print(err, file=sys.stderr, end="")
+
+
 def postprocess_hires_sharp(_args) -> None:
     script = REMOTE_HIRES_SHARPEN.read_text(encoding="utf-8")
     with connect() as client:
@@ -1325,6 +1391,31 @@ def main() -> None:
     skin_parser.add_argument("--blur", type=float, default=5.0)
     skin_parser.add_argument("--strength", type=float, default=0.85)
     skin_parser.set_defaults(func=postprocess_skin_tone)
+    face_color_parser = sub.add_parser("postprocess-face-reference-color")
+    face_color_parser.add_argument("--source-image", required=True)
+    face_color_parser.add_argument("--image", required=True)
+    face_color_parser.add_argument("--face-mask", required=True)
+    face_color_parser.add_argument("--output", required=True)
+    face_color_parser.add_argument("--refined-mask-output", required=True)
+    face_color_parser.add_argument(
+        "--method",
+        choices=[
+            "lab_mean_shift",
+            "lab_mean_std",
+            "lab_selective_shift",
+            "rgb_gain_preserve_y",
+            "rgb_gain_selective_preserve_y",
+            "ycbcr_mean_shift",
+            "ycbcr_mean_std",
+        ],
+        default="rgb_gain_selective_preserve_y",
+    )
+    face_color_parser.add_argument("--threshold", type=int, default=32)
+    face_color_parser.add_argument("--face-grow", type=int, default=42)
+    face_color_parser.add_argument("--alpha-dilate", type=int, default=7)
+    face_color_parser.add_argument("--alpha-blur", type=float, default=12.0)
+    face_color_parser.add_argument("--strength", type=float, default=0.45)
+    face_color_parser.set_defaults(func=postprocess_face_reference_color)
     sharpen_parser = sub.add_parser("postprocess-hires-sharp")
     sharpen_parser.add_argument("--image", required=True)
     sharpen_parser.add_argument("--face-mask", required=True)

@@ -1,11 +1,17 @@
 # Status
 
-Updated: 2026-04-18
+Updated: 2026-04-22
 
 ## Current State
 
 - API workflow exists at `workflows/faceswap_subject_on_character_api.json`.
 - UI workflow exists at `workflows/faceswap_subject_on_character_ui.json`.
+- Face color sidecar experiments for the Superman matrix were run at `test_outputs/face_color_method_matrix_superman_20260422/`.
+- Expanded face color method sweeps were rerun at `test_outputs/face_color_method_matrix_superman_20260422_altideas/` and `test_outputs/face_color_method_matrix_superman_20260422_tuned/`.
+- Current recommendation from the April 22 face-only boards: prefer the gentler illuminant-style sidecar `rgb_gain_selective_preserve_y` at strength `0.45` over global chroma-transfer methods.
+- Working diagnosis: the visible mismatch is usually not pure skin-tone error. It is more often a face-local white-balance / tint mismatch plus overly broad recoloring of the whole masked face. Treating it as full reference-color transfer makes the face look like a different rendering.
+- `scripts/run_visual_prompt_subject_matrix.py` now supports automatic source-referenced face color sidecar generation through `scripts/simplepod.py postprocess-face-reference-color`, defaults to the new selective RGB-gain method, and still allows opt-out via `--skip-face-color-sidecar`.
+- `scripts/run_face_color_method_matrix.py` now regenerates both `comparison_board.png` and `comparison_face_board.png` so the April 22 judgment workflow is reproducible.
 - Workflow builder exists at `scripts/build_faceswap_workflow.py` and is the source of truth for both workflow JSON files.
 - Current local inputs include `subject_5 year curly.webp`, `superman.png`, `superman adult.png`, and `spiderman.png`.
 - SimplePod env keys are expected in `.env`; secrets stay untracked.

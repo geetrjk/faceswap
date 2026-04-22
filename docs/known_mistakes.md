@@ -221,3 +221,15 @@ Fix: Query `/object_info/ReActorFaceSwap` before assuming a restore-model token 
 Problem: A deterministic hi-res sharpen pass can improve eye and hair-edge crispness, but it does not create new structural information. If it is baked into the only final output path, it becomes harder to judge whether apparent improvement is real facial recovery or just post-sharpen contrast.
 
 Fix: Keep deterministic sharpening as a separate comparison output such as `final_hires_sharp_*`. Judge it against the unsharpened hi-res result and the SDEdit-based path before deciding whether the extra pass is worth its complexity.
+
+## Mean/Std Face Color Matching Over-Normalizes
+
+Problem: In source-referenced face color correction, full mean/std transfer (LAB or YCbCr) can pull faces toward an over-normalized tone and lose plausible local stylization, especially on darker and mid-tone subjects.
+
+Fix: Keep mean/std variants only as comparison baselines. Prefer a gentler illuminant-style correction first, and only fall back to stronger chroma transfer when the mismatch is obviously not just a tint cast.
+
+## Skin Tone Drift Is Often A Tint Problem, Not A Full Tone Problem
+
+Problem: When the solved face looks wrong, the error can look like "bad skin tone" even when the larger problem is face-local illuminant or white-balance mismatch. A full face chroma transfer then over-corrects and makes the whole face look like a different rendering.
+
+Fix: Start with a conservative illuminant-style correction that preserves luminance, then make it selective inside the skin region so the change falls mostly on core skin rather than lips, feature edges, and boundary shading. The current default sidecar is `rgb_gain_selective_preserve_y` at strength `0.45`.
