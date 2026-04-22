@@ -51,6 +51,7 @@ def build_workflow(
     target_image: str,
     checkpoint: str,
     detail_checkpoint: str,
+    reactor_enabled: bool,
     reactor_face_restore_model: str,
     reactor_face_restore_visibility: float,
     reactor_codeformer_weight: float,
@@ -154,7 +155,7 @@ def build_workflow(
             {
                 "model": link(15, 0),
                 "ipadapter": link(15, 1),
-                "image": link(1, 0),
+                "image": link(2, 0),
                 "weight": ipadapter_weight,
                 "weight_type": ipadapter_weight_type,
                 "combine_embeds": "concat",
@@ -187,7 +188,7 @@ def build_workflow(
         "20": api_node(
             "ReActorFaceSwap",
             {
-                "enabled": True,
+                "enabled": reactor_enabled,
                 "input_image": link(18, 0),
                 "source_image": link(1, 0),
                 "swap_model": "inswapper_128.onnx",
@@ -311,7 +312,7 @@ def build_workflow(
         "41": api_node(
             "ReActorFaceSwap",
             {
-                "enabled": True,
+                "enabled": reactor_enabled,
                 "input_image": link(40, 0),
                 "source_image": link(1, 0),
                 "swap_model": "inswapper_128.onnx",
@@ -336,6 +337,7 @@ def build_ui_workflow(
     target_image: str,
     checkpoint: str,
     detail_checkpoint: str,
+    reactor_enabled: bool,
     reactor_face_restore_model: str,
     reactor_face_restore_visibility: float,
     reactor_codeformer_weight: float,
@@ -401,7 +403,7 @@ def build_ui_workflow(
         [16, 14, 0, 15, 0, "MODEL"],
         [17, 15, 0, 16, 0, "MODEL"],
         [18, 15, 1, 16, 1, "IPADAPTER"],
-        [19, 1, 0, 16, 2, "IMAGE"],
+        [19, 2, 0, 16, 2, "IMAGE"],
         [20, 7, 0, 16, 5, "MASK"],
         [21, 16, 0, 17, 0, "MODEL"],
         [22, 4, 0, 17, 1, "CONDITIONING"],
@@ -457,8 +459,8 @@ def build_ui_workflow(
         "last_node_id": 46,
         "last_link_id": 67,
         "nodes": [
-            node(1, "LoadImage", [60, 80], 0, outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [14, 19, 29]}], widgets_values=[subject_image, "image"], title="Load Source Identity"),
-            node(2, "LoadImage", [60, 360], 1, outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [3, 7]}], widgets_values=[target_image, "image"], title="Load Target Template"),
+            node(1, "LoadImage", [60, 80], 0, outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [14, 29, 63]}], widgets_values=[subject_image, "image"], title="Load Source Identity"),
+            node(2, "LoadImage", [60, 360], 1, outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [3, 7, 19]}], widgets_values=[target_image, "image"], title="Load Target Template"),
             node(3, "CheckpointLoaderSimple", [60, 700], 2, outputs=[{"name": "MODEL", "type": "MODEL", "links": [13]}, {"name": "CLIP", "type": "CLIP", "links": [1, 2]}, {"name": "VAE", "type": "VAE", "links": [8, 26]}], widgets_values=[checkpoint], title="Load SDXL Inpaint Checkpoint"),
             node(4, "CLIPTextEncode", [420, 650], 3, inputs=[{"name": "clip", "type": "CLIP", "link": 1}], outputs=[{"name": "CONDITIONING", "type": "CONDITIONING", "links": [22]}], widgets_values=[positive_prompt], title="Primary Style Prompt"),
             node(5, "CLIPTextEncode", [420, 900], 4, inputs=[{"name": "clip", "type": "CLIP", "link": 2}], outputs=[{"name": "CONDITIONING", "type": "CONDITIONING", "links": [23]}], widgets_values=[negative_prompt], title="Primary Negative Prompt"),
@@ -472,11 +474,11 @@ def build_ui_workflow(
             node(13, "PulidInsightFaceLoader", [1180, 1080], 12, outputs=[{"name": "FACEANALYSIS", "type": "FACEANALYSIS", "links": [12]}], widgets_values=["CUDA"], title="Load PuLID Face Analysis"),
             node(14, "ApplyPulidAdvanced", [1580, 900], 13, inputs=[{"name": "model", "type": "MODEL", "link": 13}, {"name": "pulid", "type": "PULID", "link": 10}, {"name": "eva_clip", "type": "EVA_CLIP", "link": 11}, {"name": "face_analysis", "type": "FACEANALYSIS", "link": 12}, {"name": "image", "type": "IMAGE", "link": 14}, {"name": "attn_mask", "type": "MASK", "link": 15}], outputs=[{"name": "MODEL", "type": "MODEL", "links": [16]}], widgets_values=[pulid_weight, pulid_projection, pulid_fidelity, 0.0, 0.0, 1.0], title="Apply PuLID Identity"),
             node(15, "IPAdapterUnifiedLoader", [1980, 900], 14, inputs=[{"name": "model", "type": "MODEL", "link": 16}, {"name": "ipadapter", "type": "IPADAPTER", "link": None}], outputs=[{"name": "model", "type": "MODEL", "links": [17]}, {"name": "ipadapter", "type": "IPADAPTER", "links": [18]}], widgets_values=[ipadapter_preset], title="Load IP-Adapter"),
-            node(16, "IPAdapterAdvanced", [2380, 900], 15, inputs=[{"name": "model", "type": "MODEL", "link": 17}, {"name": "ipadapter", "type": "IPADAPTER", "link": 18}, {"name": "image", "type": "IMAGE", "link": 19}, {"name": "attn_mask", "type": "MASK", "link": 20}], outputs=[{"name": "MODEL", "type": "MODEL", "links": [21]}], widgets_values=[ipadapter_weight, ipadapter_weight_type, "concat", 0.0, ipadapter_end_at, ipadapter_embeds_scaling], title="Apply Structural IP-Adapter Guidance"),
+            node(16, "IPAdapterAdvanced", [2380, 900], 15, inputs=[{"name": "model", "type": "MODEL", "link": 17}, {"name": "ipadapter", "type": "IPADAPTER", "link": 18}, {"name": "image", "type": "IMAGE", "link": 19}, {"name": "attn_mask", "type": "MASK", "link": 20}], outputs=[{"name": "MODEL", "type": "MODEL", "links": [21]}], widgets_values=[ipadapter_weight, ipadapter_weight_type, "concat", 0.0, ipadapter_end_at, ipadapter_embeds_scaling], title="Apply Target Style IP-Adapter Guidance"),
             node(17, "KSampler", [2780, 780], 16, inputs=[{"name": "model", "type": "MODEL", "link": 21}, {"name": "positive", "type": "CONDITIONING", "link": 22}, {"name": "negative", "type": "CONDITIONING", "link": 23}, {"name": "latent_image", "type": "LATENT", "link": 24}], outputs=[{"name": "LATENT", "type": "LATENT", "links": [25]}], widgets_values=[primary_seed, "fixed", primary_steps, primary_cfg, sampler_name, scheduler, primary_denoise], title="Primary High-Denoise Generation"),
             node(18, "VAEDecode", [3180, 780], 17, inputs=[{"name": "samples", "type": "LATENT", "link": 25}, {"name": "vae", "type": "VAE", "link": 26}], outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [27, 28]}], title="Decode Generated Head"),
             node(19, "SaveImage", [3540, 700], 18, inputs=[{"name": "images", "type": "IMAGE", "link": 27}], widgets_values=[f"{intermediate_prefix}/generated_head"], title="Save Generated Head"),
-            node(20, "ReActorFaceSwap", [3540, 920], 19, inputs=[{"name": "input_image", "type": "IMAGE", "link": 28}, {"name": "source_image", "type": "IMAGE", "link": 29}], outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [30, 32, 35]}], widgets_values=[True, "inswapper_128.onnx", "retinaface_resnet50", reactor_face_restore_model, reactor_face_restore_visibility, reactor_codeformer_weight, "no", "no", "0", "0", 1], title="ReActor Restore Weld"),
+            node(20, "ReActorFaceSwap", [3540, 920], 19, inputs=[{"name": "input_image", "type": "IMAGE", "link": 28}, {"name": "source_image", "type": "IMAGE", "link": 29}], outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [30, 32, 35]}], widgets_values=[reactor_enabled, "inswapper_128.onnx", "retinaface_resnet50", reactor_face_restore_model, reactor_face_restore_visibility, reactor_codeformer_weight, "no", "no", "0", "0", 1], title="ReActor Restore Weld"),
             node(21, "SaveImage", [3940, 920], 20, inputs=[{"name": "images", "type": "IMAGE", "link": 30}], widgets_values=[f"{intermediate_prefix}/reactor_bake"], title="Save ReActor Bake"),
             node(22, "FaceAnalysisModels", [3940, 1150], 21, outputs=[{"name": "ANALYSIS_MODELS", "type": "ANALYSIS_MODELS", "links": [31]}], widgets_values=["insightface", "CUDA"], title="Load Face Analysis"),
             node(23, "FaceSegmentation", [4320, 1120], 22, inputs=[{"name": "analysis_models", "type": "ANALYSIS_MODELS", "link": 31}, {"name": "image", "type": "IMAGE", "link": 32}], outputs=[{"name": "mask", "type": "MASK", "links": [33, 37]}, {"name": "image", "type": "IMAGE", "links": None}, {"name": "seg_mask", "type": "MASK", "links": None}, {"name": "seg_image", "type": "IMAGE", "links": None}, {"name": "x", "type": "INT", "links": None}, {"name": "y", "type": "INT", "links": None}, {"name": "width", "type": "INT", "links": None}, {"name": "height", "type": "INT", "links": None}], widgets_values=[inner_face_area, inner_face_grow, True, inner_face_blur], title="Inner Face Blend Mask"),
@@ -497,7 +499,7 @@ def build_ui_workflow(
             node(38, "VAEEncode", [6680, 1920], 37, inputs=[{"name": "pixels", "type": "IMAGE", "link": 54}, {"name": "vae", "type": "VAE", "link": 55}], outputs=[{"name": "LATENT", "type": "LATENT", "links": [59]}], title="Encode Hi-Res Base"),
             node(39, "KSampler", [7080, 1920], 38, inputs=[{"name": "model", "type": "MODEL", "link": 56}, {"name": "positive", "type": "CONDITIONING", "link": 57}, {"name": "negative", "type": "CONDITIONING", "link": 58}, {"name": "latent_image", "type": "LATENT", "link": 59}], outputs=[{"name": "LATENT", "type": "LATENT", "links": [60]}], widgets_values=[hires_seed, "fixed", hires_steps, hires_cfg, sampler_name, scheduler, hires_denoise], title="Hi-Res Precision Refine"),
             node(40, "VAEDecode", [7480, 1920], 39, inputs=[{"name": "samples", "type": "LATENT", "link": 60}, {"name": "vae", "type": "VAE", "link": 61}], outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [62]}], title="Decode Hi-Res Refine"),
-            node(41, "ReActorFaceSwap", [7880, 1920], 40, inputs=[{"name": "input_image", "type": "IMAGE", "link": 62}, {"name": "source_image", "type": "IMAGE", "link": 63}], outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [64]}], widgets_values=[True, "inswapper_128.onnx", "retinaface_resnet50", reactor_face_restore_model, reactor_face_restore_visibility, reactor_codeformer_weight, "no", "no", "0", "0", 1], title="ReActor Hi-Res Restore Weld"),
+            node(41, "ReActorFaceSwap", [7880, 1920], 40, inputs=[{"name": "input_image", "type": "IMAGE", "link": 62}, {"name": "source_image", "type": "IMAGE", "link": 63}], outputs=[{"name": "IMAGE", "type": "IMAGE", "links": [64]}], widgets_values=[reactor_enabled, "inswapper_128.onnx", "retinaface_resnet50", reactor_face_restore_model, reactor_face_restore_visibility, reactor_codeformer_weight, "no", "no", "0", "0", 1], title="ReActor Hi-Res Restore Weld"),
             node(42, "SaveImage", [8280, 1920], 41, inputs=[{"name": "images", "type": "IMAGE", "link": 64}], widgets_values=[hires_filename_prefix], title="Save Hi-Res Result"),
             node(43, "CheckpointLoaderSimple", [420, 1160], 41, outputs=[{"name": "MODEL", "type": "MODEL", "links": [37, 56]}, {"name": "CLIP", "type": "CLIP", "links": [66, 67]}, {"name": "VAE", "type": "VAE", "links": [36, 42, 55, 61]}], widgets_values=[detail_checkpoint], title="Load SDXL Detail Checkpoint"),
             node(44, "CLIPTextEncode", [820, 1100], 42, inputs=[{"name": "clip", "type": "CLIP", "link": 66}], outputs=[{"name": "CONDITIONING", "type": "CONDITIONING", "links": [38, 57]}], widgets_values=[positive_prompt], title="Detail Style Prompt"),
@@ -509,8 +511,9 @@ def build_ui_workflow(
         "config": {},
         "extra": {
             "note": (
-                "Rebuilt visual prompt stack: semantic CLIPSeg head mask -> PuLID + structural "
-                "IP-Adapter primary generation -> ReActor restore weld -> precision inner-face SDEdit on a base SDXL checkpoint. "
+                "Rebuilt visual prompt stack: semantic CLIPSeg head mask -> subject-driven PuLID identity + "
+                "target-driven IP-Adapter style/composition guidance -> optional ReActor restore weld -> "
+                "precision inner-face SDEdit on a base SDXL checkpoint. "
                 "Exposed skin harmonization is handled by the remote deterministic postprocess helper. "
                 "A separate low-denoise hi-res branch upsamples the clean composite, refines on the base SDXL checkpoint, and reapplies ReActor for identity lock."
             )
@@ -527,6 +530,11 @@ def main() -> None:
     parser.add_argument("--target-image", default="superman.png")
     parser.add_argument("--checkpoint", default="sd_xl_base_1.0_inpainting_0.1.safetensors")
     parser.add_argument("--detail-checkpoint", default="sd_xl_base_1.0.safetensors")
+    parser.add_argument(
+        "--disable-reactor",
+        action="store_true",
+        help="Turn off both ReActor weld stages so the diffusion stack can be evaluated on its own.",
+    )
     parser.add_argument("--reactor-face-restore-model", default="GFPGANv1.4.pth")
     parser.add_argument("--reactor-face-restore-visibility", type=float, default=1.0)
     parser.add_argument("--reactor-codeformer-weight", type=float, default=0.5)
@@ -590,6 +598,7 @@ def main() -> None:
     workflow_args = vars(args).copy()
     output = Path(workflow_args.pop("output"))
     ui_output = Path(workflow_args.pop("ui_output"))
+    workflow_args["reactor_enabled"] = not workflow_args.pop("disable_reactor")
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(build_workflow(**workflow_args), indent=2) + "\n", encoding="utf-8")

@@ -53,6 +53,17 @@ def main() -> None:
     parser.add_argument("--wait", type=int, default=600)
     parser.add_argument("--local-dir", default=None)
     parser.add_argument("--skip-setup", action="store_true")
+    parser.add_argument(
+        "--include-default-excluded",
+        action="store_true",
+        help="Include subjects that are omitted by the historical default exclude list.",
+    )
+    parser.add_argument(
+        "--builder-arg",
+        action="append",
+        default=[],
+        help="Additional argument to pass through to build_visual_prompt_hybrid_workflow.py. May be repeated.",
+    )
     parser.add_argument("--skip-face-color-sidecar", action="store_true")
     parser.add_argument(
         "--face-color-method",
@@ -81,7 +92,9 @@ def main() -> None:
     args = parser.parse_args()
 
     subjects_dir = Path(args.subjects_dir)
-    excluded = DEFAULT_EXCLUDED_SUBJECTS | set(args.exclude_subject)
+    excluded = set(args.exclude_subject)
+    if not args.include_default_excluded:
+        excluded |= DEFAULT_EXCLUDED_SUBJECTS
     subjects = sorted(
         path
         for path in subjects_dir.iterdir()
@@ -115,26 +128,26 @@ def main() -> None:
         run_dir = f"faceswap/visual_prompt_hybrid/subject_matrix_{target_slug}_{stamp}/{slug}"
         workflow_path = local_dir / f"{slug}_api.json"
 
-        run(
-            [
-                sys.executable,
-                str(BUILD_SCRIPT),
-                "--output",
-                str(workflow_path),
-                "--ui-output",
-                str(local_dir / f"{slug}_ui.json"),
-                "--subject-image",
-                subject.name,
-                "--target-image",
-                args.target_image,
-                "--filename-prefix",
-                f"{run_dir}/final",
-                "--hires-filename-prefix",
-                f"{run_dir}/final_hires",
-                "--intermediate-prefix",
-                f"{run_dir}/intermediate",
-            ]
-        )
+        build_cmd = [
+            sys.executable,
+            str(BUILD_SCRIPT),
+            *args.builder_arg,
+            "--output",
+            str(workflow_path),
+            "--ui-output",
+            str(local_dir / f"{slug}_ui.json"),
+            "--subject-image",
+            subject.name,
+            "--target-image",
+            args.target_image,
+            "--filename-prefix",
+            f"{run_dir}/final",
+            "--hires-filename-prefix",
+            f"{run_dir}/final_hires",
+            "--intermediate-prefix",
+            f"{run_dir}/intermediate",
+        ]
+        run(build_cmd)
 
         queued = run(
             [

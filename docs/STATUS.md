@@ -4,6 +4,7 @@ Updated: 2026-04-22
 
 ## Current State
 
+- Durable experiment tracking now lives in `docs/experiments/README.md` and `docs/experiments/CATALOG.md`.
 - API workflow exists at `workflows/faceswap_subject_on_character_api.json`.
 - UI workflow exists at `workflows/faceswap_subject_on_character_ui.json`.
 - Face color sidecar experiments for the Superman matrix were run at `test_outputs/face_color_method_matrix_superman_20260422/`.

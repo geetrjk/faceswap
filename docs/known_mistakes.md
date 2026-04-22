@@ -216,6 +216,12 @@ Problem: The visual-prompt detail-preservation refactor initially switched `ReAc
 
 Fix: Query `/object_info/ReActorFaceSwap` before assuming a restore-model token exists on the target backend. Keep the builder parameterized, but default to a live-supported restore model unless the remote node registry explicitly advertises `codeformer`.
 
+## Subject-Driven IP-Adapter Starves Target Style
+
+Problem: The first visual-prompt hybrid graph loaded the target into the masked inpaint latent, but both PuLID and IP-Adapter still read the subject image. That made the target a weak style/color signal and let ReActor reassert the subject rendering late in the stack.
+
+Fix: Keep PuLID on the subject identity image, but drive `IPAdapterAdvanced` from the target image so color, palette, and composition are conditioned explicitly before sampling. Treat ReActor as an optional late-stage comparison, not a mandatory identity core.
+
 ## Deterministic Sharpen Must Stay Sidecar
 
 Problem: A deterministic hi-res sharpen pass can improve eye and hair-edge crispness, but it does not create new structural information. If it is baked into the only final output path, it becomes harder to judge whether apparent improvement is real facial recovery or just post-sharpen contrast.

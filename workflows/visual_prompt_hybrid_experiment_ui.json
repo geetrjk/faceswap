@@ -25,8 +25,8 @@
           "type": "IMAGE",
           "links": [
             14,
-            19,
-            29
+            29,
+            63
           ]
         }
       ],
@@ -58,7 +58,8 @@
           "type": "IMAGE",
           "links": [
             3,
-            7
+            7,
+            19
           ]
         }
       ],
@@ -639,7 +640,7 @@
         0.7,
         "K+V"
       ],
-      "title": "Apply Structural IP-Adapter Guidance"
+      "title": "Apply Target Style IP-Adapter Guidance"
     },
     {
       "id": 17,
@@ -1988,7 +1989,7 @@
     ],
     [
       19,
-      1,
+      2,
       0,
       16,
       2,
@@ -2382,7 +2383,7 @@
   "groups": [],
   "config": {},
   "extra": {
-    "note": "Rebuilt visual prompt stack: semantic CLIPSeg head mask -> PuLID + structural IP-Adapter primary generation -> ReActor restore weld -> precision inner-face SDEdit on a base SDXL checkpoint. Exposed skin harmonization is handled by the remote deterministic postprocess helper. A separate low-denoise hi-res branch upsamples the clean composite, refines on the base SDXL checkpoint, and reapplies ReActor for identity lock."
+    "note": "Rebuilt visual prompt stack: semantic CLIPSeg head mask -> subject-driven PuLID identity + target-driven IP-Adapter style/composition guidance -> optional ReActor restore weld -> precision inner-face SDEdit on a base SDXL checkpoint. Exposed skin harmonization is handled by the remote deterministic postprocess helper. A separate low-denoise hi-res branch upsamples the clean composite, refines on the base SDXL checkpoint, and reapplies ReActor for identity lock."
   },
   "version": 0.4
 }
