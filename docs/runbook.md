@@ -251,6 +251,27 @@ Keep these roles distinct:
 The Vite frontend and FastAPI backend must run on the SimplePod to have access to the local ComfyUI outputs.
 **Do not run `npm build` or `npm run dev` locally.** The SimplePod is the default environment for UI testing and iteration.
 
+### Prerequisite: Live Environment Dependencies
+
+The backend requires the underlying ComfyUI dependencies to be fully installed before generation will work.
+
+1. **Initialize ComfyUI Authentication**:
+   The backend needs an API token to communicate with ComfyUI. Generate this by running:
+   ```bash
+   .venv/bin/python scripts/simplepod.py init-auth
+   ```
+2. **Install Custom Nodes & Models**:
+   Run the preflight check to ensure the ReActor nodes and models (`inswapper_128.onnx`, `GFPGANv1.4.pth`) are installed.
+   ```bash
+   .venv/bin/python scripts/simplepod.py preflight
+   ```
+   If any files are reported as `MISSING`, you must run the setup script and restart the pod before generation will work:
+   ```bash
+   ./scripts/setup_simplepod_instantid.sh
+   ```
+
+*Note: The backend has been configured with an in-memory database and local storage fallback, so you do NOT need to configure `NEON_DATABASE_URL` or `R2_BUCKET` credentials for local development.*
+
 ### Setup and Deployment
 
 1. Install Node.js on the SimplePod (if not already installed):
@@ -267,7 +288,14 @@ The Vite frontend and FastAPI backend must run on the SimplePod to have access t
 ```bash
 .venv/bin/python scripts/simplepod.py serve-app
 ```
-The `serve-app` command will print instructions on how to access the UI.
+
+### Accessing the UI (Local Tunnel)
+
+Since port 8000 on the SimplePod is typically firewalled, use the provided tunnel script to securely forward the traffic to your local machine:
+```bash
+python scripts/tunnel.py
+```
+Then open `http://localhost:8000` in your browser.
 
 ### Active UI Development (Hot Reloading)
 
